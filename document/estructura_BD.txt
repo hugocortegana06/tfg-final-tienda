@@ -1,0 +1,54 @@
+users
+-----
+id (PK)
+name
+email (unique)
+password
+role (enum: admin, client)
+created_at
+updated_at
+
+clients
+-------
+id (PK)
+user_id (FK hacia users)
+dni (unique)
+phone
+address
+created_at
+updated_at
+
+categories
+----------
+id (PK)
+name
+description
+created_at
+updated_at
+
+products
+--------
+id (PK)
+name
+description
+price
+stock
+category_id (FK)
+created_at
+updated_at
+
+purchases
+---------
+id (PK)
+client_id (FK hacia clients)
+purchase_date
+total_amount
+created_at
+updated_at
+
+purchase_product (pivot)
+-------------------------
+purchase_id (FK)
+product_id (FK)
+quantity
+price (precio en el momento de la compra)
