@@ -1,0 +1,54 @@
+:root {
+  --color-white: #FFFFFF;
+  --color-gray-light: #F0F0F0;
+  --color-blue-light: #20a1cc; /* Azul más definido */
+  --font-family-main: "Helvetica", "Arial", sans-serif;
+}
+
+/* Fondos */
+.bg-white {
+  background-color: var(--color-white) !important;
+}
+
+.bg-gray-light {
+  background-color: var(--color-gray-light) !important;
+}
+
+.bg-light-blue {
+  background-color: var(--color-blue-light) !important;
+}
+
+/* Texto */
+.text-light-blue {
+  color: var(--color-blue-light) !important;
+}
+
+/* Animación Fade-In */
+.fade-in {
+  animation: fadeIn 0.7s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Botón Personalizado */
+.btn-light-blue {
+  background-color: var(--color-blue-light);
+  color: #fff;
+  border: none;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-light-blue:hover {
+  background-color: #1b89ad; /* azul ligeramente más oscuro para hover */
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-light-blue:active {
+  transform: scale(0.98);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}

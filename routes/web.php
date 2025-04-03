@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Formularios
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');
+Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register.form');
+
+// Procesar formularios
+Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+Route::post('/register', [AuthController::class, 'register'])->name('register.process');
+
+// Zona protegida (restringida a usuarios autenticados)
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware('auth');
