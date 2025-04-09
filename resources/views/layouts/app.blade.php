@@ -1,19 +1,37 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>@yield('title', 'App')</title>
-  <!-- Bootstrap -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-  <!-- Animate.css -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-  <!-- Tu CSS personalizado -->
-  <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+    <meta charset="UTF-8">
+    <title>@yield('title','Mi Aplicación')</title>
+
+    {{-- Incluye tu CSS (Bootstrap, Tailwind, etc.) --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-<body>
+<body class="bg-white text-dark">
 
-@yield('content')
+    @auth
+        {{-- Incluimos el navbar sólo si está autenticado --}}
+        @include('layouts.navbar')
+    @endauth
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="container mt-4">
+        {{-- Mensajes flash (success / info) --}}
+        @if(session('success'))
+            <div class="alert alert-success mb-3">
+                {{ session('success') }}
+            </div>
+        @endif
+        @if(session('info'))
+            <div class="alert alert-info mb-3">
+                {{ session('info') }}
+            </div>
+        @endif
+
+        {{-- Contenido de cada vista concreta --}}
+        @yield('content')
+    </div>
+
+    {{-- Scripts --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

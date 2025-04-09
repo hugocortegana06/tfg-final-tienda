@@ -1,32 +1,30 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
+// Rutas públicas (no requieren auth)
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');
+// Ruta POST para procesar el login
+Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+// Rutas que requieren estar autenticado
+Route::middleware('auth')->group(function() {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
 
-Route::get('/', function () {
-    return view('welcome');
+    // Otras rutas protegidas
+    // Route::resource('clients', ClientController::class);
+    // Route::resource('deposits', DepositController::class);
+
+    // Cerrar sesión
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+});
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Ruta raíz
+Route::get('/', function() {
+    return redirect('/login');
 });
 
-// Formularios
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');
-Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register.form');
-
-// Procesar formularios
-Route::post('/login', [AuthController::class, 'login'])->name('login.process');
-Route::post('/register', [AuthController::class, 'register'])->name('register.process');
-
-// Zona protegida (restringida a usuarios autenticados)
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware('auth');
