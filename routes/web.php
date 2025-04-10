@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 
 // Rutas públicas (no requieren auth)
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');
@@ -22,6 +23,21 @@ Route::middleware('auth')->group(function() {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// Rutas para depósitos finalizados y en curso
+Route::get('/deposits/finalizados', [DepositController::class, 'finalizados'])->name('deposits.finalizados');
+Route::get('/deposits/encurso', [DepositController::class, 'enCurso'])->name('deposits.encurso');
+// Rutas para añadir usuarios y depósitos
+Route::get('/deposits/create', [DepositController::class, 'create'])->name('deposits.create');
+
+Route::middleware(['auth','admin'])->group(function() {
+    Route::resource('users', UserController::class)->only(['create','store','index']);
+    // ...
+});
+
+
+
+// Ruta de clientes
+Route::resource('clients', ClientController::class); 
 
 // Ruta raíz
 Route::get('/', function() {
