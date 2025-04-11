@@ -85,7 +85,13 @@
         </div>
 
         <button type="submit" class="btn btn-primary w-100">Crear Usuario</button>
+        
+        {{-- Botón para volver a la página anterior --}}
+        <button type="button" class="btn btn-secondary w-100 mt-2" onclick="history.back()">
+            Volver
+        </button>
     </form>
+    
 </div>
 
 {{-- Validación JS --}}

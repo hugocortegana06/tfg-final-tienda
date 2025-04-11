@@ -51,4 +51,36 @@ class UserController extends Controller
         $users = User::orderBy('created_at', 'desc')->get();
         return view('users.index', compact('users'));
     }
+
+    public function update(Request $request, User $user)
+{
+    // Valida los campos que permites editar inline
+    $request->validate([
+        'name'  => 'required|string|max:100',
+        'email' => 'required|email|unique:users,email,' . $user->id,
+        // Si no permites cambiar la contraseña aquí, no lo validas
+    ]);
+
+    // Actualizar
+    $user->update([
+        'name'  => $request->name,
+        'email' => $request->email
+    ]);
+
+    // Responde
+    return response()->json([
+        'success' => true,
+        'message' => 'Usuario actualizado'
+    ], 200);
+}
+
+public function destroy(User $user)
+{
+    // Elimina
+    $user->delete();
+
+    return redirect()->route('users.index')
+                     ->with('success','Usuario eliminado correctamente');
+}
+
 }
