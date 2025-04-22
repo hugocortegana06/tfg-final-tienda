@@ -45,7 +45,7 @@
                     <p class="card-text">
                         Observa los depósitos que aún están pendientes de resolver.
                     </p>
-                    <a href="{{ route('deposits.encurso') }}" class="btn btn-warning">
+                    <a href="{{ route('deposits.index') }}" class="btn btn-warning">
                         Ver Depósitos en Curso
                     </a>
                 </div>

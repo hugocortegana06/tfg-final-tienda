@@ -1,53 +1,63 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\DepositController;
 
-// Rutas públicas (no requieren auth)
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');
-// Ruta POST para procesar el login
-Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Aquí definimos todas las rutas de la aplicación, agrupándolas y
+| protegiéndolas con los middlewares adecuados.
+|
+*/
+
+// Rutas públicas (no requieren estar autenticado)
+Route::get('/', fn() => redirect()->route('login.form'));
+Route::get('/login', [AuthController::class, 'showLoginForm'])
+     ->name('login.form');
+Route::post('/login', [AuthController::class, 'login'])
+     ->name('login.process');
+
 // Rutas que requieren estar autenticado
-Route::middleware('auth')->group(function() {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-    
-    // CRUD de clientes
-    Route::resource('clients', ClientController::class);
-    // Otras rutas protegidas
-    // Route::resource('clients', ClientController::class);
-    // Route::resource('deposits', DepositController::class);
+Route::middleware('auth')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', fn() => view('dashboard'))
+         ->name('dashboard');
 
     // Cerrar sesión
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::post('/logout', [AuthController::class, 'logout'])
+         ->name('logout');
+
+    // Búsqueda AJAX de clientes para autocomplete
+    Route::get('/clients/search', [ClientController::class, 'search'])
+         ->name('clients.search');
+
+    // CRUD de clientes
+    Route::resource('clients', ClientController::class)
+         ->except(['show']);
+
+    // CRUD de depósitos
+    Route::resource('deposits', DepositController::class)
+         ->except(['show']);
+
+    // Filtrado de depósitos
+    Route::get('/deposits/encurso', [DepositController::class, 'enCurso'])
+         ->name('deposits.encurso');
+    Route::get('/deposits/finalizados', [DepositController::class, 'finalizados'])
+         ->name('deposits.finalizados');
+
+     
+     // partial AJAX
+     Route::get('/deposits/finalizados/partial', [DepositController::class, 'finalizadosPartial'])
+     ->name('deposits.finalizados.partial');
+
+    // Rutas reservadas a administradores
+    Route::middleware('admin')->group(function () {
+        Route::resource('users', UserController::class);
+    });
 });
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-// Rutas para depósitos finalizados y en curso
-Route::get('/deposits/finalizados', [DepositController::class, 'finalizados'])->name('deposits.finalizados');
-Route::get('/deposits/encurso', [DepositController::class, 'enCurso'])->name('deposits.encurso');
-// Rutas para añadir usuarios y depósitos
-Route::get('/deposits/create', [DepositController::class, 'create'])->name('deposits.create');
-
-Route::middleware(['auth','admin'])->group(function() {
-    Route::resource('users', UserController::class);    
-    // ...
-
-     // Rutas manuales para update y destroy:
-     Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
-     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-});
-
-
-
-// Ruta de clientes
-Route::resource('clients', ClientController::class); 
-
-// Ruta raíz
-Route::get('/', function() {
-    return redirect('/login');
-});
-
