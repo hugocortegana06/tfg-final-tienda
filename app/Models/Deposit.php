@@ -14,6 +14,8 @@ class Deposit extends Model
         'problem_description', 'more_info',
         'unlock_password', // secuencia de patrón opcional
         'status', 'date_in', 'date_out',
+        'last_modification_user_id',  // <— aquí
+
     ];
 
     // Relación con Cliente
@@ -27,4 +29,20 @@ class Deposit extends Model
     {
         return $this->belongsTo(User::class);
     }
+    // Usuario que hizo la última modificación (p. ej. entrega)
+    public function lastModifier()
+    {
+        return $this->belongsTo(User::class,'last_modification_user_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function deliverer()
+    {
+        return $this->belongsTo(User::class, 'last_modification_user_id');
+    }
+
 }

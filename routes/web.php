@@ -56,6 +56,17 @@ Route::middleware('auth')->group(function () {
      Route::get('/deposits/finalizados/partial', [DepositController::class, 'finalizadosPartial'])
      ->name('deposits.finalizados.partial');
 
+     // Ya dentro del middleware 'auth'...
+     Route::get('/deposits/entregados', [
+          DepositController::class, 'entregados'
+     ])->name('deposits.entregados');
+     
+     // Para la recarga AJAX de la tabla
+     Route::get('/deposits/entregados/partial', [
+          DepositController::class, 'entregadosPartial'
+     ])->name('deposits.entregados.partial');
+     
+
     // Rutas reservadas a administradores
     Route::middleware('admin')->group(function () {
         Route::resource('users', UserController::class);

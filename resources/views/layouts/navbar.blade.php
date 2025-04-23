@@ -14,11 +14,13 @@
         </li>
         {{-- Histórico de entregas --}}
         <li class="nav-item">
-          <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button class="btn btn-link nav-link" type="submit">Histórico de entregas</button>
-          </form>
-        </li>
+      <form method="GET" action="{{ route('deposits.entregados') }}">
+        <button class="btn btn-link nav-link" type="submit">
+          Histórico de entregas
+        </button>
+      </form>
+    </li>
+
 
         {{-- Cerrar sesión --}}
         <li class="nav-item">
