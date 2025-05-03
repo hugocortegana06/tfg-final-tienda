@@ -1,5 +1,5 @@
 {{-- resources/views/deposits/partials/table.blade.php --}}
-<table class="table table-bordered align-middle" id="depositsTable">
+<table class="table table-bordered align-middle">
   <thead>
     <tr>
       <th>ID</th>
@@ -11,32 +11,57 @@
   </thead>
   <tbody>
     @foreach($deposits as $d)
-    <tr data-id="{{ $d->id }}">
-      <td>{{ $d->id }}</td>
-      <td class="dep-status">{{ $d->status }}</td>
-      <td>{{ $d->brand }} {{ $d->model }}</td>
-      <td>{{ $d->client->name }} {{ $d->client->surname }}</td>
-      <td>
-        <button class="btn btn-sm btn-info btn-edit">Editar</button>
-        <form class="deleteForm d-inline" method="POST"
-              action="{{ route('deposits.destroy', $d->id) }}">
-          @csrf @method('DELETE')
-          <button type="button" class="btn btn-sm btn-danger btn-delete">
-            Eliminar
+      @php
+        // Preparamos un JSON seguro: escapamos apóstrofos y dejamos comillas dobles intactas
+        $details = [
+          'id'                  => $d->id,
+          'client'              => $d->client->name.' '.$d->client->surname,
+          'dispositivo'         => $d->brand.' '.$d->model,
+          'serial_number'       => $d->serial_number,
+          'problem_description' => $d->problem_description,
+          'more_info'           => $d->more_info,
+          'unlock_password'     => $d->unlock_password,
+          'status'              => $d->status,
+          'date_in'             => $d->date_in,
+          'date_out'            => $d->date_out,
+          'creator'             => optional($d->creator)->name,
+          'last_modifier'       => optional($d->lastModifier)->name,
+        ];
+        // JSON_HEX_APOS evita apóstrofos; JSON_UNESCAPED_UNICODE mantiene acentos
+        $json = json_encode($details, JSON_HEX_APOS|JSON_UNESCAPED_UNICODE);
+      @endphp
+
+      <tr
+        data-id="{{ $d->id }}"
+        data-details='{!! $json !!}'
+      >
+        <td>{{ $d->id }}</td>
+        <td class="dep-status">{{ $d->status }}</td>
+        <td>{{ $d->brand }} {{ $d->model }}</td>
+        <td>{{ $d->client->name }} {{ $d->client->surname }}</td>
+        <td>
+          <button class="btn btn-sm btn-secondary btn-info-detail me-1">
+            + Información
           </button>
-        </form>
-      </td>
-    </tr>
+          <button class="btn btn-sm btn-info btn-edit me-1">Editar</button>
+          <form action="{{ route('deposits.destroy', $d) }}" method="POST" class="d-inline">
+            @csrf @method('DELETE')
+            <button type="button" class="btn btn-sm btn-danger btn-delete">
+              Eliminar
+            </button>
+          </form>
+          <a href="{{ route('deposits.invoice', $d->id) }}" class="btn btn-sm btn-warning">
+            Generar Factura
+          </a>
+        </td>
+      </tr>
     @endforeach
   </tbody>
 </table>
 
-<div class="d-flex justify-content-end">
+<nav class="d-flex justify-content-end">
   {{ $deposits
-      ->appends(['per_page' => request('per_page')])
-      ->links('pagination::bootstrap-5', [
-          'paginator' => $deposits,
-          'class'     => 'pagination-sm'
-      ])
+      ->appends(request()->only(['per_page','search']))
+      ->links('pagination::bootstrap-5')
   }}
-</div>
+</nav>

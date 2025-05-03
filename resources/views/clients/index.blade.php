@@ -7,7 +7,7 @@
 <div class="container">
     <h1 class="mb-4">Clientes</h1>
 
-    {{-- Top row: per‑page selector + “Añadir cliente” --}}
+    {{-- Top row: per-page selector + “Añadir cliente” --}}
     <div class="row mb-3 align-items-center">
         <div class="col-auto">
             <form id="perPageForm" method="GET" class="d-flex align-items-center">
@@ -51,6 +51,7 @@
         <thead>
             <tr>
                 <th>Teléfono</th>
+                <th>Teléfono alternativo</th> {{-- nueva columna --}}
                 <th>Nombre</th>
                 <th>Apellidos</th>
                 <th>Info Adicional</th>
@@ -62,6 +63,7 @@
             @foreach($clients as $client)
             <tr data-phone="{{ $client->phone }}">
                 <td class="client-phone">{{ $client->phone }}</td>
+                <td class="client-phone2">{{ $client->phone_2 ?? '—' }}</td> {{-- mostramos phone_2 --}}
                 <td class="client-name">{{ $client->name }}</td>
                 <td class="client-surname">{{ $client->surname }}</td>
                 <td class="client-info">{{ $client->additional_info }}</td>
@@ -169,7 +171,7 @@
     document.getElementById('btnConfirmDelete')
       .addEventListener('click', () => currentForm && currentForm.submit());
 
-    // 4) Inline edit “Nombre”, “Apellidos” and “Info Adicional”
+    // 4) Inline edit Nombre, Apellidos, Info Adicional y Teléfono alternativo
     document.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', onEdit));
 
     function onEdit(e) {
@@ -177,15 +179,18 @@
       const row = btn.closest('tr');
       const phone = row.dataset.phone;
 
+      const tdPhone2  = row.querySelector('.client-phone2');
       const tdName    = row.querySelector('.client-name');
       const tdSurname = row.querySelector('.client-surname');
       const tdInfo    = row.querySelector('.client-info');
 
+      const oldPhone2 = tdPhone2.textContent.trim() === '—' ? '' : tdPhone2.textContent.trim();
       const oldName    = tdName.textContent.trim();
       const oldSurname = tdSurname.textContent.trim();
       const oldInfo    = tdInfo.textContent.trim();
 
       // Switch to inputs
+      tdPhone2.innerHTML  = `<input type="text" class="form-control form-control-sm" name="phone_2" value="${oldPhone2}" />`;
       tdName.innerHTML    = `<input type="text" class="form-control form-control-sm" name="name" value="${oldName}" />`;
       tdSurname.innerHTML = `<input type="text" class="form-control form-control-sm" name="surname" value="${oldSurname}" />`;
       tdInfo.innerHTML    = `<input type="text" class="form-control form-control-sm" name="additional_info" value="${oldInfo}" />`;
@@ -212,6 +217,7 @@
       }
 
       function onSave() {
+        const newPhone2  = tdPhone2.querySelector('input').value.trim();
         const newName    = tdName.querySelector('input').value.trim();
         const newSurname = tdSurname.querySelector('input').value.trim();
         const newInfo    = tdInfo.querySelector('input').value.trim();
@@ -229,6 +235,7 @@
             'X-CSRF-TOKEN':'{{ csrf_token() }}'
           },
           body: JSON.stringify({
+            phone_2: newPhone2,
             name: newName,
             surname: newSurname,
             additional_info: newInfo
@@ -236,6 +243,7 @@
         })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
+          tdPhone2.textContent  = newPhone2 || '—';
           tdName.textContent    = newName;
           tdSurname.textContent = newSurname;
           tdInfo.textContent    = newInfo;
@@ -249,6 +257,7 @@
       }
 
       function onCancel() {
+        tdPhone2.textContent  = oldPhone2 || '—';
         tdName.textContent    = oldName;
         tdSurname.textContent = oldSurname;
         tdInfo.textContent    = oldInfo;

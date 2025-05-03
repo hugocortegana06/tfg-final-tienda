@@ -6,6 +6,8 @@ namespace App\Http\Controllers;
 use App\Models\Deposit;
 use App\Models\Client;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf; // alias de Dompdf
+
 
 class DepositController extends Controller
 {
@@ -237,5 +239,21 @@ class DepositController extends Controller
             ->appends(['per_page'=>$perPage,'search'=>$search]);
 
         return view('deposits.partials.table_entregados', compact('deposits'))->render();
+    }
+    public function label(Deposit $deposit)
+    {
+        // Carga una vista blade que formatea la etiqueta
+        $pdf = Pdf::loadView('deposits.label', compact('deposit'));
+
+        // Fuerza descarga con nombre etiqueta_{id}.pdf
+        return $pdf->download("etiqueta_{$deposit->id}.pdf");
+    }
+    public function invoice(Deposit $deposit)
+    {
+        // Carga la vista que contiene los 3 recuadros
+        $pdf = Pdf::loadView('deposits.invoice', compact('deposit'));
+
+        // Descarga el PDF con nombre factura_{id}.pdf
+        return $pdf->download("factura_{$deposit->id}.pdf");
     }
 }

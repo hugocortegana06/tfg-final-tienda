@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title','Histórico de Entregas')
+@section('title','Depósitos Finalizados')
 
 @section('content')
 <div class="container">
-  <h1 class="mb-4">Histórico de Entregas</h1>
+  <h1 class="mb-4">Depósitos Finalizados</h1>
 
   {{-- Top bar: per-page + búsqueda --}}
   <div class="row mb-3 align-items-center">

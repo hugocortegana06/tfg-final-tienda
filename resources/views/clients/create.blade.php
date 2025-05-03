@@ -1,3 +1,4 @@
+{{-- resources/views/clients/create.blade.php --}}
 @extends('layouts.app')
 
 @section('title','Crear Cliente')
@@ -22,6 +23,7 @@
 
     <form action="{{ route('clients.store') }}" method="POST">
       @csrf
+
       <div class="mb-3">
         <label for="phone" class="form-label">Teléfono</label>
         <input 
@@ -32,6 +34,20 @@
           value="{{ old('phone') }}"
           required
           maxlength="20"
+        >
+      </div>
+
+      {{-- Nuevo campo Telefono 2 --}}
+      <div class="mb-3">
+        <label for="phone_2" class="form-label">Teléfono secundario</label>
+        <input 
+          type="text"
+          name="phone_2"
+          id="phone_2"
+          class="form-control"
+          value="{{ old('phone_2') }}"
+          maxlength="20"
+          placeholder="Opcional"
         >
       </div>
 

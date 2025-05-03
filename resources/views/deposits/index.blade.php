@@ -13,7 +13,7 @@
             <label class="me-2 mb-0">Mostrar</label>
             <select id="perPageSelect" class="form-select form-select-sm me-3">
                 @foreach([5,10,15,20] as $n)
-                    <option value="{{ $n }}" {{ ($perPage==$n)?'selected':'' }}>
+                    <option value="{{ $n }}" {{ $perPage == $n ? 'selected' : '' }}>
                         {{ $n }}
                     </option>
                 @endforeach
@@ -25,6 +25,7 @@
               class="form-control form-control-sm"
               placeholder="Buscar por cliente..."
               value="{{ $search ?? '' }}"
+              style="max-width:200px;"
             >
         </div>
         <div class="col text-end">
@@ -42,13 +43,13 @@
       </div>
     @endif
 
-    {{-- Contenedor de la tabla (se recarga vía AJAX) --}}
+    {{-- Tabla y paginación recargable vía AJAX --}}
     <div id="tableContainer">
-        @include('deposits.partials.table')
+      @include('deposits.partials.table', ['deposits' => $deposits])
     </div>
 </div>
 
-{{-- Modal de confirmación de eliminación --}}
+{{-- Modal Confirmar Eliminación --}}
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog"><div class="modal-content">
     <div class="modal-header">
@@ -62,121 +63,163 @@
     </div>
   </div></div>
 </div>
+
+{{-- Modal + Información --}}
+<div class="modal fade" id="infoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Detalles del Depósito</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <dl class="row" id="infoDetails"></dl>
+    </div>
+    <div class="modal-footer">
+      <a id="btnGenerateLabel" class="btn btn-sm btn-success" href="#" target="_blank">
+        Generar etiqueta
+      </a>
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+    </div>
+  </div></div>
+</div>
 @endsection
 
 @push('scripts')
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // 1) Ocultar flash del servidor
-    const svr = document.getElementById('serverSuccess');
-    if (svr) setTimeout(() => svr.style.display='none', 3000);
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Helper flash
+  const flash = (msg, type='info') => {
+    const box = document.getElementById('updateMessage');
+    box.className = 'alert mb-3 alert-' + type;
+    box.textContent = msg;
+    box.style.display = 'block';
+    setTimeout(() => box.style.display = 'none', 3000);
+  };
+  // Hide server success
+  const svr = document.getElementById('serverSuccess');
+  if (svr) setTimeout(() => svr.style.display = 'none', 3000);
 
-    // 2) Delete con modal
-    let curForm = null;
-    document.addEventListener('click', e => {
-      if (e.target.matches('.btn-delete')) {
-        curForm = e.target.closest('form');
-        new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
-      }
-    });
-    document.getElementById('btnConfirmDelete')
-      .addEventListener('click', () => curForm && curForm.submit());
-
-    // 3) Inline‐edit de “estado”
-    function attachInlineEdit() {
-      document.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.onclick = () => {
-          const row = btn.closest('tr');
-          const id  = row.dataset.id;
-          const td  = row.querySelector('.dep-status');
-          const old = td.textContent.trim();
-
-          td.innerHTML = `
-            <select class="form-select form-select-sm">
-              <option ${old==='En curso'    ?'selected':''}>En curso</option>
-              <option ${old==='Electrónico' ?'selected':''}>Electrónico</option>
-              <option ${old==='Finalizado'  ?'selected':''}>Finalizado</option>
-              <option ${old==='Entregado'   ?'selected':''}>Entregado</option>
-            </select>`;
-          btn.textContent = 'Guardar';
-          btn.classList.replace('btn-info','btn-success');
-
-          const cancel = document.createElement('button');
-          cancel.type = 'button';
-          cancel.textContent = 'Cancelar';
-          cancel.className = 'btn btn-sm btn-secondary ms-2';
-          btn.after(cancel);
-
-          btn.onclick    = save;
-          cancel.onclick = () => { td.textContent = old; teardown(); };
-
-          function teardown() {
-            btn.textContent = 'Editar';
-            btn.classList.replace('btn-success','btn-info');
-            cancel.remove();
-            attachInlineEdit();
-          }
-
-          function save() {
-            const nv = td.querySelector('select').value;
-            fetch(`/deposits/${id}`, {
-              method:'PATCH',
-              headers:{
-                'Content-Type':'application/json',
-                'X-CSRF-TOKEN':'{{ csrf_token() }}'
-              },
-              body: JSON.stringify({ status: nv })
-            })
-            .then(r => r.ok ? r.json() : Promise.reject())
-            .then(data => {
-              td.textContent = nv;
-              teardown();
-              flash(data.message,'success');
-            })
-            .catch(() => {
-              teardown();
-              flash('Error al actualizar','danger');
-            });
-          }
-        };
-      });
+  // Delete confirmation
+  let curForm = null;
+  document.addEventListener('click', e => {
+    if (e.target.matches('.btn-delete')) {
+      curForm = e.target.closest('form');
+      new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
     }
-
-    // 4) Helper de mensajes efímeros
-    function flash(msg,type='info') {
-      const box = document.getElementById('updateMessage');
-      box.className = 'alert mb-3 alert-'+type;
-      box.textContent = msg;
-      box.style.display = 'block';
-      setTimeout(() => box.style.display = 'none', 3000);
-    }
-
-    // 5) AJAX live‑search + per‑page + recarga de tabla
-    const perPage = document.getElementById('perPageSelect');
-    const search  = document.getElementById('searchInput');
-    const container = document.getElementById('tableContainer');
-    let timer;
-    function reload() {
-      const url = `{{ url('deposits') }}`
-                + `?per_page=${perPage.value}`
-                + `&search=${encodeURIComponent(search.value)}`;
-      fetch(url, { headers:{ 'X-Requested-With':'XMLHttpRequest' } })
-        .then(r => r.text())
-        .then(html => {
-          container.innerHTML = html;
-          attachInlineEdit();
-        });
-    }
-    perPage.onchange = reload;
-    search.oninput   = () => {
-      clearTimeout(timer);
-      timer = setTimeout(reload, 300);
-    };
-
-    // 6) Hook inicial
-    attachInlineEdit();
   });
-  </script>
+  document.getElementById('btnConfirmDelete')
+    .addEventListener('click', () => curForm && curForm.submit());
+
+  // Inline‐edit status
+  function attachInlineEdit() {
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.onclick = () => {
+        const row = btn.closest('tr'),
+              id  = row.dataset.id,
+              td  = row.querySelector('.dep-status'),
+              old = td.textContent.trim();
+        td.innerHTML = `
+          <select class="form-select form-select-sm">
+            <option ${old==='En curso'    ?'selected':''}>En curso</option>
+            <option ${old==='Electrónico' ?'selected':''}>Electrónico</option>
+            <option ${old==='Finalizado'  ?'selected':''}>Finalizado</option>
+            <option ${old==='Entregado'   ?'selected':''}>Entregado</option>
+          </select>`;
+        btn.textContent = 'Guardar';
+        btn.classList.replace('btn-info','btn-success');
+
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = 'Cancelar';
+        cancel.className = 'btn btn-sm btn-secondary ms-2';
+        btn.after(cancel);
+
+        btn.onclick    = save;
+        cancel.onclick = () => { td.textContent = old; teardown(); };
+
+        function teardown() {
+          btn.textContent = 'Editar';
+          btn.classList.replace('btn-success','btn-info');
+          cancel.remove();
+          attachInlineEdit();
+        }
+        function save() {
+          const nv = td.querySelector('select').value;
+          fetch(`/deposits/${id}`, {
+            method:'PATCH',
+            headers:{
+              'Content-Type':'application/json',
+              'X-CSRF-TOKEN':'{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ status: nv })
+          })
+          .then(r=>r.ok? r.json(): Promise.reject())
+          .then(data=>{
+            td.textContent = nv;
+            teardown();
+            flash(data.message,'success');
+          })
+          .catch(()=>{
+            teardown();
+            flash('Error al actualizar','danger');
+          });
+        }
+      };
+    });
+  }
+
+  // “+ Información” button
+  document.addEventListener('click', e => {
+    if (!e.target.matches('.btn-info-detail')) return;
+    const row  = e.target.closest('tr'),
+          info = JSON.parse(row.getAttribute('data-details')),
+          dl   = document.getElementById('infoDetails');
+    dl.innerHTML = `
+      <dt class="col-sm-3">ID</dt><dd class="col-sm-9">${info.id}</dd>
+      <dt class="col-sm-3">Cliente</dt><dd class="col-sm-9">${info.client}</dd>
+      <dt class="col-sm-3">Dispositivo</dt><dd class="col-sm-9">${info.dispositivo}</dd>
+      <dt class="col-sm-3">N.º Serie</dt><dd class="col-sm-9">${info.serial_number}</dd>
+      <dt class="col-sm-3">Problema</dt><dd class="col-sm-9">${info.problem_description}</dd>
+      <dt class="col-sm-3">Info Adic.</dt><dd class="col-sm-9">${info.more_info||'—'}</dd>
+      <dt class="col-sm-3">Patrón</dt><dd class="col-sm-9">${info.unlock_password||'—'}</dd>
+      <dt class="col-sm-3">Estado</dt><dd class="col-sm-9">${info.status}</dd>
+      <dt class="col-sm-3">Fecha Entrada</dt><dd class="col-sm-9">${info.date_in}</dd>
+      <dt class="col-sm-3">Fecha Salida</dt><dd class="col-sm-9">${info.date_out||'—'}</dd>
+      <dt class="col-sm-3">Creado por</dt><dd class="col-sm-9">${info.creator||'—'}</dd>
+      <dt class="col-sm-3">Última modif.</dt><dd class="col-sm-9">${info.last_modifier||'—'}</dd>
+    `;
+    new bootstrap.Modal(document.getElementById('infoModal')).show();
+    document.getElementById('btnGenerateLabel').href = `/deposits/${info.id}/label`;
+  });
+
+  // AJAX live-search + per-page reload
+  const perPage   = document.getElementById('perPageSelect'),
+        search    = document.getElementById('searchInput'),
+        container = document.getElementById('tableContainer');
+  let timer;
+  function reload() {
+    const params = new URLSearchParams({
+      per_page: perPage.value,
+      search:   search.value
+    });
+    fetch(`{{ url('deposits') }}?${params}`, {
+      headers: { 'X-Requested-With':'XMLHttpRequest' }
+    })
+    .then(r => r.text())
+    .then(html => {
+      container.innerHTML = html;
+      attachInlineEdit();
+    });
+  }
+  perPage.onchange = reload;
+  search.oninput   = () => {
+    clearTimeout(timer);
+    timer = setTimeout(reload, 300);
+  };
+
+  // Start inline-edit
+  attachInlineEdit();
+});
+</script>
 @endpush

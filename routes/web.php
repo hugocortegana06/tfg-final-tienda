@@ -50,7 +50,8 @@ Route::middleware('auth')->group(function () {
          ->name('deposits.encurso');
     Route::get('/deposits/finalizados', [DepositController::class, 'finalizados'])
          ->name('deposits.finalizados');
-
+     Route::get('deposits/{deposit}/label', [DepositController::class, 'label'])
+         ->name('deposits.label');
      
      // partial AJAX
      Route::get('/deposits/finalizados/partial', [DepositController::class, 'finalizadosPartial'])
@@ -60,7 +61,8 @@ Route::middleware('auth')->group(function () {
      Route::get('/deposits/entregados', [
           DepositController::class, 'entregados'
      ])->name('deposits.entregados');
-     
+     Route::get('deposits/{deposit}/invoice', [DepositController::class, 'invoice'])
+     ->name('deposits.invoice');
      // Para la recarga AJAX de la tabla
      Route::get('/deposits/entregados/partial', [
           DepositController::class, 'entregadosPartial'
