@@ -5,265 +5,214 @@
 
 @section('content')
 <div class="container">
-    <h1 class="mb-4">Clientes</h1>
+  <h1 class="mb-4">Clientes</h1>
 
-    {{-- Top row: per-page selector + “Añadir cliente” --}}
-    <div class="row mb-3 align-items-center">
-        <div class="col-auto">
-            <form id="perPageForm" method="GET" class="d-flex align-items-center">
-                <label class="me-2 mb-0">Mostrar</label>
-                <select
-                    name="per_page"
-                    id="per_page"
-                    class="form-select form-select-sm me-2"
-                    onchange="this.form.submit()"
-                >
-                    @foreach([5,10,15,20] as $n)
-                        <option
-                            value="{{ $n }}"
-                            {{ ($perPage ?? 10) == $n ? 'selected' : '' }}
-                        >
-                            {{ $n }}
-                        </option>
-                    @endforeach
-                </select>
-                <label class="mb-0">por página</label>
-            </form>
-        </div>
-        <div class="col text-end">
-            <a
-                href="{{ route('clients.create') }}"
-                class="btn btn-sm btn-primary"
-            >Añadir cliente</a>
-        </div>
+  {{-- Top bar: per-page + búsqueda + añadir --}}
+  <div class="row mb-3 align-items-center">
+    <div class="col-auto d-flex align-items-center">
+      <label class="me-2 mb-0">Mostrar</label>
+      <select id="perPageSelect" class="form-select form-select-sm me-3">
+        @foreach([5,10,15,20] as $n)
+          <option value="{{ $n }}" {{ ($perPage == $n) ? 'selected' : '' }}>
+            {{ $n }}
+          </option>
+        @endforeach
+      </select>
+
+      <input
+        type="text"
+        id="searchInput"
+        class="form-control form-control-sm"
+        placeholder="Buscar por nombre o apellidos…"
+        value="{{ $search ?? '' }}"
+        style="max-width:200px;"
+      >
     </div>
-
-    {{-- Flash messages --}}
-    <div id="updateMessage" class="alert mb-3" style="display:none;"></div>
-    @if(session('success'))
-        <div id="serverSuccess" class="alert alert-success mb-3">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    {{-- Clientes table --}}
-    <table class="table table-bordered align-middle" id="clientsTable">
-        <thead>
-            <tr>
-                <th>Teléfono</th>
-                <th>Teléfono alternativo</th> {{-- nueva columna --}}
-                <th>Nombre</th>
-                <th>Apellidos</th>
-                <th>Info Adicional</th>
-                <th>Creado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($clients as $client)
-            <tr data-phone="{{ $client->phone }}">
-                <td class="client-phone">{{ $client->phone }}</td>
-                <td class="client-phone2">{{ $client->phone_2 ?? '—' }}</td> {{-- mostramos phone_2 --}}
-                <td class="client-name">{{ $client->name }}</td>
-                <td class="client-surname">{{ $client->surname }}</td>
-                <td class="client-info">{{ $client->additional_info }}</td>
-                <td>{{ $client->created_at->format('d-m-Y H:i') }}</td>
-                <td>
-                    <button class="btn btn-sm btn-info btn-edit">Editar</button>
-                    <form
-                        action="{{ route('clients.destroy', $client->phone) }}"
-                        method="POST"
-                        class="deleteForm d-inline"
-                    >
-                        @csrf
-                        @method('DELETE')
-                        <button
-                            type="button"
-                            class="btn btn-sm btn-danger btn-delete"
-                        >Eliminar</button>
-                    </form>
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-
-    {{-- Paginación pequeña a la derecha --}}
-    <div class="d-flex justify-content-end">
-        {{ $clients
-            ->appends(['per_page' => $perPage ?? 10])
-            ->links('pagination::bootstrap-5', [
-                'paginator' => $clients,
-                'class'     => 'pagination-sm'
-            ])
-        }}
-    </div>
-</div>
-
-{{-- Confirm deletion modal --}}
-<div
-  class="modal fade"
-  id="confirmDeleteModal"
-  tabindex="-1"
-  aria-labelledby="confirmDeleteModalLabel"
-  aria-hidden="true"
->
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="confirmDeleteModalLabel">
-          Confirmar Eliminación
-        </h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        ¿Seguro que deseas eliminar este cliente?
-      </div>
-      <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-bs-dismiss="modal"
-        >Cancelar</button>
-        <button
-          type="button"
-          class="btn btn-danger"
-          id="btnConfirmDelete"
-        >Eliminar</button>
-      </div>
+    <div class="col text-end">
+      <a href="{{ route('clients.create') }}" class="btn btn-sm btn-primary">
+        Añadir cliente
+      </a>
     </div>
   </div>
+
+  {{-- Flash messages --}}
+  <div id="updateMessage" class="alert mb-3" style="display:none;"></div>
+  @if(session('success'))
+    <div id="serverSuccess" class="alert alert-success mb-3">
+      {{ session('success') }}
+    </div>
+  @endif
+
+  {{-- Contenedor de la tabla (se recarga vía AJAX) --}}
+  <div id="tableContainer">
+    @include('clients.partials.table', ['clients' => $clients])
+  </div>
+</div>
+
+{{-- Modal de confirmación de eliminación --}}
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Confirmar Eliminación</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">¿Deseas eliminar este cliente?</div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-danger" id="btnConfirmDelete">
+        Eliminar
+      </button>
+    </div>
+  </div></div>
 </div>
 @endsection
 
 @push('scripts')
-  <!-- Bootstrap JS for modal -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // 1) Hide server flash after 3s
-    const svr = document.getElementById('serverSuccess');
-    if (svr) setTimeout(() => svr.style.display = 'none', 3000);
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 1) Oculta flash del servidor
+  const svr = document.getElementById('serverSuccess');
+  if (svr) setTimeout(()=>svr.style.display='none',3000);
 
-    // 2) Helper for ephemeral messages
-    function showMsg(msg, type='info') {
-      const box = document.getElementById('updateMessage');
-      box.className = 'alert mb-3 alert-' + type;
-      box.textContent = msg;
-      box.style.display = 'block';
-      setTimeout(() => box.style.display = 'none', 3000);
-    }
+  // 2) Helper flash
+  function flash(msg,type='info'){
+    const box = document.getElementById('updateMessage');
+    box.className = 'alert mb-3 alert-'+type;
+    box.textContent = msg;
+    box.style.display='block';
+    setTimeout(()=>box.style.display='none',3000);
+  }
 
-    // 3) Delete with modal confirmation
-    let currentForm = null;
-    document.querySelectorAll('.btn-delete').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentForm = btn.closest('.deleteForm');
+  // 3) Modal delete
+  let curForm = null;
+  function attachModalDelete(){
+    document.querySelectorAll('.btn-delete').forEach(b=>{
+      b.onclick = ()=>{
+        curForm = b.closest('form');
         new bootstrap.Modal(
           document.getElementById('confirmDeleteModal')
         ).show();
-      });
+      };
     });
-    document.getElementById('btnConfirmDelete')
-      .addEventListener('click', () => currentForm && currentForm.submit());
+    document.getElementById('btnConfirmDelete').onclick = ()=> curForm && curForm.submit();
+  }
 
-    // 4) Inline edit Nombre, Apellidos, Info Adicional y Teléfono alternativo
-    document.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', onEdit));
+  // 4) Inline-edit (phone_2, name, surname, additional_info)
+  function attachInlineEdit(){
+    document.querySelectorAll('.btn-edit').forEach(b=>{
+      b.onclick = ()=>{
+        const row       = b.closest('tr'),
+              phone     = row.dataset.phone,
+              tdPhone2  = row.querySelector('.client-phone2'),
+              tdName    = row.querySelector('.client-name'),
+              tdSurname = row.querySelector('.client-surname'),
+              tdInfo    = row.querySelector('.client-info'),
+              old2      = tdPhone2.textContent.trim()==='—'?'':tdPhone2.textContent.trim(),
+              oldName   = tdName.textContent.trim(),
+              oldSurname= tdSurname.textContent.trim(),
+              oldInfo   = tdInfo.textContent.trim();
 
-    function onEdit(e) {
-      const btn = e.target;
-      const row = btn.closest('tr');
-      const phone = row.dataset.phone;
+        // Convertir a inputs
+        tdPhone2.innerHTML  = `<input type="text" class="form-control form-control-sm" name="phone_2" value="${old2}" />`;
+        tdName.innerHTML    = `<input type="text" class="form-control form-control-sm" name="name"     value="${oldName}" />`;
+        tdSurname.innerHTML = `<input type="text" class="form-control form-control-sm" name="surname"  value="${oldSurname}" />`;
+        tdInfo.innerHTML    = `<input type="text" class="form-control form-control-sm" name="additional_info" value="${oldInfo}" />`;
 
-      const tdPhone2  = row.querySelector('.client-phone2');
-      const tdName    = row.querySelector('.client-name');
-      const tdSurname = row.querySelector('.client-surname');
-      const tdInfo    = row.querySelector('.client-info');
+        // Botones
+        b.textContent = 'Guardar';
+        b.classList.replace('btn-info','btn-success');
+        const cancel = document.createElement('button');
+        cancel.type='button';
+        cancel.textContent='Cancelar';
+        cancel.className='btn btn-sm btn-secondary ms-2';
+        b.after(cancel);
 
-      const oldPhone2 = tdPhone2.textContent.trim() === '—' ? '' : tdPhone2.textContent.trim();
-      const oldName    = tdName.textContent.trim();
-      const oldSurname = tdSurname.textContent.trim();
-      const oldInfo    = tdInfo.textContent.trim();
+        b.onclick     = save;
+        cancel.onclick= ()=>{ teardown(); restore(); };
 
-      // Switch to inputs
-      tdPhone2.innerHTML  = `<input type="text" class="form-control form-control-sm" name="phone_2" value="${oldPhone2}" />`;
-      tdName.innerHTML    = `<input type="text" class="form-control form-control-sm" name="name" value="${oldName}" />`;
-      tdSurname.innerHTML = `<input type="text" class="form-control form-control-sm" name="surname" value="${oldSurname}" />`;
-      tdInfo.innerHTML    = `<input type="text" class="form-control form-control-sm" name="additional_info" value="${oldInfo}" />`;
-
-      // Change buttons to Save + Cancel
-      btn.textContent = 'Guardar';
-      btn.classList.replace('btn-info','btn-success');
-      const btnCancel = document.createElement('button');
-      btnCancel.type = 'button';
-      btnCancel.textContent = 'Cancelar';
-      btnCancel.className = 'btn btn-sm btn-secondary ms-2';
-      btn.insertAdjacentElement('afterend', btnCancel);
-
-      btn.removeEventListener('click', onEdit);
-      btn.addEventListener('click', onSave);
-      btnCancel.addEventListener('click', onCancel);
-
-      function teardown() {
-        btnCancel.remove();
-        btn.textContent = 'Editar';
-        btn.classList.replace('btn-success','btn-info');
-        btn.removeEventListener('click', onSave);
-        btn.addEventListener('click', onEdit);
-      }
-
-      function onSave() {
-        const newPhone2  = tdPhone2.querySelector('input').value.trim();
-        const newName    = tdName.querySelector('input').value.trim();
-        const newSurname = tdSurname.querySelector('input').value.trim();
-        const newInfo    = tdInfo.querySelector('input').value.trim();
-
-        if (!newName || !newSurname) {
-          showMsg('Nombre y apellidos no pueden ir vacíos','warning');
-          return;
+        function teardown(){
+          cancel.remove();
+          b.textContent='Editar';
+          b.classList.replace('btn-success','btn-info');
         }
+        function restore(){
+          tdPhone2.textContent  = old2||'—';
+          tdName.textContent    = oldName;
+          tdSurname.textContent = oldSurname;
+          tdInfo.textContent    = oldInfo;
+          attachInlineEdit();
+        }
+        function save(){
+          const nv2 = tdPhone2.querySelector('input').value.trim(),
+                nvName    = tdName.querySelector('input').value.trim(),
+                nvSurname = tdSurname.querySelector('input').value.trim(),
+                nvInfo    = tdInfo.querySelector('input').value.trim();
 
-        fetch(`/clients/${phone}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type':'application/json',
-            'Accept':'application/json',
-            'X-CSRF-TOKEN':'{{ csrf_token() }}'
-          },
-          body: JSON.stringify({
-            phone_2: newPhone2,
-            name: newName,
-            surname: newSurname,
-            additional_info: newInfo
+          if(!nvName||!nvSurname){
+            flash('Nombre y apellidos no pueden ir vacíos','warning');
+            return;
+          }
+
+          fetch(`/clients/${phone}`, {
+            method:'PATCH',
+            headers:{
+              'Content-Type':'application/json',
+              'Accept':'application/json',
+              'X-CSRF-TOKEN':'{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+              phone_2: nv2, name: nvName,
+              surname: nvSurname, additional_info: nvInfo
+            })
           })
-        })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => {
-          tdPhone2.textContent  = newPhone2 || '—';
-          tdName.textContent    = newName;
-          tdSurname.textContent = newSurname;
-          tdInfo.textContent    = newInfo;
-          teardown();
-          showMsg(data.message || 'Cliente actualizado correctamente','success');
-        })
-        .catch(() => {
-          teardown();
-          showMsg('Hubo un error al actualizar el cliente.','danger');
-        });
-      }
+          .then(r=>r.ok?r.json():Promise.reject())
+          .then(json=>{
+            tdPhone2.textContent  = nv2||'—';
+            tdName.textContent    = nvName;
+            tdSurname.textContent = nvSurname;
+            tdInfo.textContent    = nvInfo;
+            teardown();
+            flash(json.message,'success');
+          })
+          .catch(()=>{
+            teardown();
+            restore();
+            flash('Error al actualizar','danger');
+          });
+        }
+      };
+    });
+  }
 
-      function onCancel() {
-        tdPhone2.textContent  = oldPhone2 || '—';
-        tdName.textContent    = oldName;
-        tdSurname.textContent = oldSurname;
-        tdInfo.textContent    = oldInfo;
-        teardown();
-      }
-    }
-  });
-  </script>
+  // 5) AJAX reload per_page + search
+  const perPage = document.getElementById('perPageSelect'),
+        search  = document.getElementById('searchInput'),
+        cont    = document.getElementById('tableContainer');
+  let timer;
+  function reload(){
+    const qs = new URLSearchParams({
+      per_page: perPage.value,
+      search:   search.value
+    });
+    fetch(`{{ route('clients.index') }}?${qs}`, {
+      headers:{ 'X-Requested-With':'XMLHttpRequest' }
+    })
+    .then(r=>r.text())
+    .then(html=>{
+      cont.innerHTML = html;
+      attachModalDelete();
+      attachInlineEdit();
+    });
+  }
+  perPage.onchange = reload;
+  search.oninput   = ()=>{ clearTimeout(timer); timer=setTimeout(reload,300); };
+
+  // 6) Inicializar
+  attachModalDelete();
+  attachInlineEdit();
+});
+</script>
 @endpush

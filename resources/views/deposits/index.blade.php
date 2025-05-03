@@ -1,3 +1,4 @@
+
 {{-- resources/views/deposits/index.blade.php --}}
 @extends('layouts.app')
 
@@ -13,7 +14,7 @@
             <label class="me-2 mb-0">Mostrar</label>
             <select id="perPageSelect" class="form-select form-select-sm me-3">
                 @foreach([5,10,15,20] as $n)
-                    <option value="{{ $n }}" {{ $perPage == $n ? 'selected' : '' }}>
+                    <option value="{{ $n }}" {{ ($perPage == $n) ? 'selected' : '' }}>
                         {{ $n }}
                     </option>
                 @endforeach
@@ -45,7 +46,11 @@
 
     {{-- Tabla y paginación recargable vía AJAX --}}
     <div id="tableContainer">
-      @include('deposits.partials.table', ['deposits' => $deposits])
+      @include('deposits.partials.table', [
+        'deposits' => $deposits,
+        'perPage'  => $perPage,
+        'search'   => $search
+      ])
     </div>
 </div>
 
@@ -73,6 +78,9 @@
     </div>
     <div class="modal-body">
       <dl class="row" id="infoDetails"></dl>
+      <div class="d-flex justify-content-center my-3">
+        <canvas id="patternCanvas" width="150" height="150" style="display:none;"></canvas>
+      </div>
     </div>
     <div class="modal-footer">
       <a id="btnGenerateLabel" class="btn btn-sm btn-success" href="#" target="_blank">
@@ -89,7 +97,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   // Helper flash
-  const flash = (msg, type='info') => {
+  const flash = (msg, type = 'info') => {
     const box = document.getElementById('updateMessage');
     box.className = 'alert mb-3 alert-' + type;
     box.textContent = msg;
@@ -119,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
               id  = row.dataset.id,
               td  = row.querySelector('.dep-status'),
               old = td.textContent.trim();
+
         td.innerHTML = `
           <select class="form-select form-select-sm">
             <option ${old==='En curso'    ?'selected':''}>En curso</option>
@@ -154,13 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             body: JSON.stringify({ status: nv })
           })
-          .then(r=>r.ok? r.json(): Promise.reject())
-          .then(data=>{
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
             td.textContent = nv;
             teardown();
             flash(data.message,'success');
           })
-          .catch(()=>{
+          .catch(() => {
             teardown();
             flash('Error al actualizar','danger');
           });
@@ -172,23 +181,82 @@ document.addEventListener('DOMContentLoaded', () => {
   // “+ Información” button
   document.addEventListener('click', e => {
     if (!e.target.matches('.btn-info-detail')) return;
-    const row  = e.target.closest('tr'),
-          info = JSON.parse(row.getAttribute('data-details')),
-          dl   = document.getElementById('infoDetails');
+    const row    = e.target.closest('tr'),
+          info   = JSON.parse(row.getAttribute('data-details')),
+          dl     = document.getElementById('infoDetails'),
+          canvas = document.getElementById('patternCanvas'),
+          ctx    = canvas.getContext('2d');
+
+    // Detalles
     dl.innerHTML = `
       <dt class="col-sm-3">ID</dt><dd class="col-sm-9">${info.id}</dd>
       <dt class="col-sm-3">Cliente</dt><dd class="col-sm-9">${info.client}</dd>
       <dt class="col-sm-3">Dispositivo</dt><dd class="col-sm-9">${info.dispositivo}</dd>
       <dt class="col-sm-3">N.º Serie</dt><dd class="col-sm-9">${info.serial_number}</dd>
       <dt class="col-sm-3">Problema</dt><dd class="col-sm-9">${info.problem_description}</dd>
-      <dt class="col-sm-3">Info Adic.</dt><dd class="col-sm-9">${info.more_info||'—'}</dd>
-      <dt class="col-sm-3">Patrón</dt><dd class="col-sm-9">${info.unlock_password||'—'}</dd>
+      <dt class="col-sm-3">Info Adic.</dt><dd class="col-sm-9">${info.more_info ?? 'N/A'}</dd>
+      <dt class="col-sm-3">Patrón</dt><dd class="col-sm-9">${info.unlock_password ? info.unlock_password : 'N/A'}</dd>
       <dt class="col-sm-3">Estado</dt><dd class="col-sm-9">${info.status}</dd>
       <dt class="col-sm-3">Fecha Entrada</dt><dd class="col-sm-9">${info.date_in}</dd>
-      <dt class="col-sm-3">Fecha Salida</dt><dd class="col-sm-9">${info.date_out||'—'}</dd>
-      <dt class="col-sm-3">Creado por</dt><dd class="col-sm-9">${info.creator||'—'}</dd>
-      <dt class="col-sm-3">Última modif.</dt><dd class="col-sm-9">${info.last_modifier||'—'}</dd>
+      <dt class="col-sm-3">Fecha Salida</dt><dd class="col-sm-9">${info.date_out ?? 'N/A'}</dd>
+      <dt class="col-sm-3">Creado por</dt><dd class="col-sm-9">${info.creator ?? 'N/A'}</dd>
+      <dt class="col-sm-3">Última modif.</dt><dd class="col-sm-9">${info.last_modifier ?? 'N/A'}</dd>
     `;
+
+    // Dibuja patrón si existe, resaltando inicio en verde y mostrando índice
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (info.unlock_password) {
+      const seq = info.unlock_password.split('').map(n => parseInt(n,10));
+      const margin  = 20;
+      const spacing = (canvas.width - 2*margin) / 2;
+      const startColor = '#198754'; // verde Bootstrap
+      const dotColor   = '#0d6efd'; // azul
+
+      // Configuración texto
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+
+      // Dibujar nodos y etiquetas
+      for (let i = 1; i <= 9; i++) {
+        const idx  = i - 1,
+              rowI = Math.floor(idx/3),
+              colI = idx % 3,
+              x    = margin + colI * spacing,
+              y    = margin + rowI * spacing;
+        // Nodo
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, 2*Math.PI);
+        if (seq.includes(i)) {
+          ctx.fillStyle = (i === seq[0]) ? startColor : dotColor;
+        } else {
+          ctx.fillStyle = '#ccc';
+        }
+        ctx.fill();
+        // Índice debajo
+        ctx.fillStyle = '#000';
+        ctx.fillText(i, x, y + 10);
+      }
+
+      // Dibujar líneas en verde
+      ctx.strokeStyle = startColor;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      seq.forEach((n, i) => {
+        const idx  = n - 1,
+              r    = Math.floor(idx/3),
+              c    = idx % 3,
+              x    = margin + c * spacing,
+              y    = margin + r * spacing;
+        if (i === 0) ctx.moveTo(x, y);
+        else         ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      canvas.style.display = 'block';
+    } else {
+      canvas.style.display = 'none';
+    }
+
     new bootstrap.Modal(document.getElementById('infoModal')).show();
     document.getElementById('btnGenerateLabel').href = `/deposits/${info.id}/label`;
   });
@@ -218,8 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
     timer = setTimeout(reload, 300);
   };
 
-  // Start inline-edit
+  // Iniciar inline-edit
   attachInlineEdit();
 });
 </script>
 @endpush
+
