@@ -99,11 +99,19 @@ class DepositController extends Controller
             'date_out'  => 'nullable|date',
             'more_info' => 'nullable|string',
         ]);
-
+    
+        // Si el nuevo estado es "Entregado" y aún no tiene fecha de salida,
+        // fijamos date_out a la fecha actual.
+        if ($data['status'] === 'Entregado' && is_null($deposit->date_out)) {
+            $data['date_out'] = now()->toDateString();
+        }
+    
+        // Actualizamos quién modificó por última vez
         $data['last_modification_user_id'] = auth()->id();
+    
         $deposit->update($data);
-
-        return response()->json(['message'=>'Depósito actualizado correctamente']);
+    
+        return response()->json(['message' => 'Depósito actualizado correctamente']);
     }
 
     /**
@@ -176,8 +184,8 @@ class DepositController extends Controller
             ->paginate($perPage)
             ->appends(['per_page'=>$perPage,'search'=>$search]);
 
-        return view('deposits.partials.table', compact('deposits'))->render();
-    }
+            return view('deposits.partials.table_finalizados', compact('deposits'))->render();
+        }
 
     /**
      * 8) Página de “Entregados”.

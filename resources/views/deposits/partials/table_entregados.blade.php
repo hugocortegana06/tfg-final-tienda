@@ -6,6 +6,8 @@
       <th>Estado</th>
       <th>Dispositivo</th>
       <th>Cliente</th>
+      <th>Fecha Entrada</th>
+      <th>Fecha Salida</th>
       <th>Creado por</th>
       <th>Entregado por</th>
       <th>Acciones</th>
@@ -18,7 +20,8 @@
       <td class="dep-status">{{ $d->status }}</td>
       <td>{{ $d->brand }} {{ $d->model }}</td>
       <td>{{ $d->client->name }} {{ $d->client->surname }}</td>
-      {{-- Aquí usamos optional() para no fallar si la relación es NULL --}}
+      <td>{{ \Illuminate\Support\Carbon::parse($d->date_in)->format('d/m/Y') }}</td>
+      <td>{{ $d->date_out ? \Illuminate\Support\Carbon::parse($d->date_out)->format('d/m/Y') : '—' }}</td>
       <td>{{ optional($d->creator)->name ?? '—' }}</td>
       <td>{{ optional($d->deliverer)->name ?? '—' }}</td>
       <td>

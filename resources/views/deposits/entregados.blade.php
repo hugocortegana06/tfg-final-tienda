@@ -13,9 +13,7 @@
       <label class="me-2 mb-0">Mostrar</label>
       <select id="perPageSelect" class="form-select form-select-sm me-3">
         @foreach([5,10,15,20] as $n)
-          <option value="{{ $n }}" {{ ($perPage==$n)?'selected':'' }}>
-            {{ $n }}
-          </option>
+          <option value="{{ $n }}" {{ ($perPage==$n)?'selected':'' }}>{{ $n }}</option>
         @endforeach
       </select>
 
@@ -58,12 +56,8 @@
     </div>
     <div class="modal-body">¿Deseas eliminar este depósito?</div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-        Cancelar
-      </button>
-      <button type="button" class="btn btn-danger" id="btnConfirmDelete">
-        Eliminar
-      </button>
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button type="button" class="btn btn-danger" id="btnConfirmDelete">Eliminar</button>
     </div>
   </div></div>
 </div>
@@ -73,85 +67,123 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // 1) Oculta flash del servidor
-  const svr = document.getElementById('serverSuccess');
-  if (svr) setTimeout(()=>svr.style.display='none',3000);
-
-  // 2) Helper flash
-  function flash(msg,type='info'){
+  // Helpers
+  const flash = (msg, type='info') => {
     const box = document.getElementById('updateMessage');
-    box.className = 'alert mb-3 alert-'+type;
+    box.className = 'alert mb-3 alert-' + type;
     box.textContent = msg;
-    box.style.display='block';
-    setTimeout(()=>box.style.display='none',3000);
+    box.style.display = 'block';
+    setTimeout(() => box.style.display = 'none', 3000);
+  };
+  const svr = document.getElementById('serverSuccess');
+  if (svr) setTimeout(() => svr.style.display = 'none', 3000);
+
+  // Variables globales
+  const perPage  = document.getElementById('perPageSelect'),
+        search   = document.getElementById('searchInput'),
+        container= document.getElementById('tableContainer');
+  let timer, currentPage = 1;
+
+  // Función que recarga SOLO la tabla parcial
+  function reloadTable() {
+    const params = new URLSearchParams({
+      per_page: perPage.value,
+      search:   search.value,
+      page:     currentPage
+    });
+    fetch(`{{ route('deposits.entregados.partial') }}?${params.toString()}`, {
+      headers: { 'X-Requested-With':'XMLHttpRequest' }
+    })
+    .then(r => r.text())
+    .then(html => {
+      container.innerHTML = html;
+      attachModalDelete();
+      attachInlineEdit();
+    })
+    .catch(console.error);
   }
 
-  // 3) Attach modal delete
+  // Captura cambios de per-page y búsqueda
+  perPage.onchange = () => { currentPage = 1; reloadTable(); };
+  search.oninput   = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { currentPage = 1; reloadTable(); }, 300);
+  };
+
+  // Captura clicks en la paginación de la tabla parcial
+  container.addEventListener('click', e => {
+    const link = e.target.closest('.pagination a');
+    if (!link) return;
+    e.preventDefault();
+    // Extraemos el ?page=X de la URL
+    const url = new URL(link.href);
+    currentPage = url.searchParams.get('page') || 1;
+    reloadTable();
+  });
+
+  // Confirmación de eliminación
   let curForm = null;
-  function attachModalDelete(){
-    document.querySelectorAll('.btn-delete').forEach(b=>{
-      b.onclick = ()=>{
-        curForm = b.closest('form');
-        new bootstrap.Modal(
-          document.getElementById('confirmDeleteModal')
-        ).show();
+  function attachModalDelete() {
+    container.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.onclick = () => {
+        curForm = btn.closest('form');
+        new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
       };
     });
-    document.getElementById('btnConfirmDelete').onclick = ()=> curForm && curForm.submit();
+    document.getElementById('btnConfirmDelete').onclick = () => curForm && curForm.submit();
   }
 
-  // 4) Attach inline-edit status
-  function attachInlineEdit(){
-    document.querySelectorAll('.btn-edit').forEach(b=>{
-      b.onclick = ()=>{
-        const row = b.closest('tr'),
+  // Inline‐edit de estado
+  function attachInlineEdit() {
+    container.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.onclick = () => {
+        const row = btn.closest('tr'),
               id  = row.dataset.id,
               td  = row.querySelector('.dep-status'),
               old = td.textContent.trim();
 
         td.innerHTML = `
           <select class="form-select form-select-sm">
-            <option ${old==='En curso'    ? 'selected':''}>En curso</option>
-            <option ${old==='Electrónico' ? 'selected':''}>Electrónico</option>
-            <option ${old==='Finalizado'  ? 'selected':''}>Finalizado</option>
-            <option ${old==='Entregado'   ? 'selected':''}>Entregado</option>
+            <option ${old==='En curso'    ?'selected':''}>En curso</option>
+            <option ${old==='Electrónico' ?'selected':''}>Electrónico</option>
+            <option ${old==='Finalizado'  ?'selected':''}>Finalizado</option>
+            <option ${old==='Entregado'   ?'selected':''}>Entregado</option>
           </select>`;
+        btn.textContent = 'Guardar';
+        btn.classList.replace('btn-info','btn-success');
 
-        b.textContent = 'Guardar';
-        b.classList.replace('btn-info','btn-success');
         const cancel = document.createElement('button');
-        cancel.type='button';
-        cancel.textContent='Cancelar';
-        cancel.className='btn btn-sm btn-secondary ms-2';
-        b.after(cancel);
+        cancel.type = 'button';
+        cancel.textContent = 'Cancelar';
+        cancel.className = 'btn btn-sm btn-secondary ms-2';
+        btn.after(cancel);
 
-        b.onclick    = save;
-        cancel.onclick = ()=> { td.textContent = old; teardown(); };
+        btn.onclick    = save;
+        cancel.onclick = () => { td.textContent = old; teardown(); };
 
-        function teardown(){
-          b.textContent='Editar';
-          b.classList.replace('btn-success','btn-info');
+        function teardown() {
+          btn.textContent = 'Editar';
+          btn.classList.replace('btn-success','btn-info');
           cancel.remove();
           attachInlineEdit();
         }
-
-        function save(){
+        function save() {
           const nv = td.querySelector('select').value;
           fetch(`/deposits/${id}`, {
-            method:'PATCH',
+            method: 'PATCH',
             headers: {
               'Content-Type':'application/json',
               'X-CSRF-TOKEN':'{{ csrf_token() }}'
             },
             body: JSON.stringify({ status: nv })
           })
-          .then(r=>r.ok?r.json():Promise.reject())
-          .then(json=>{
+          .then(r=>r.ok? r.json():Promise.reject())
+          .then(data => {
             td.textContent = nv;
             teardown();
-            flash(json.message,'success');
+            flash(data.message,'success');
           })
-          .catch(()=>{
+          .catch(() => {
             teardown();
             flash('Error al actualizar','danger');
           });
@@ -160,30 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5) AJAX reload per_page + search
-  const perPage = document.getElementById('perPageSelect'),
-        search  = document.getElementById('searchInput'),
-        cont    = document.getElementById('tableContainer');
-  let timer;
-  function reload(){
-    const qs = new URLSearchParams({
-      per_page: perPage.value,
-      search:   search.value
-    });
-    fetch(`{{ route('deposits.entregados.partial') }}?${qs}`, {
-      headers:{ 'X-Requested-With':'XMLHttpRequest' }
-    })
-    .then(r=>r.text())
-    .then(html=>{
-      cont.innerHTML = html;
-      attachModalDelete();
-      attachInlineEdit();
-    });
-  }
-  perPage.onchange = reload;
-  search.oninput   = ()=>{ clearTimeout(timer); timer=setTimeout(reload,300); };
-
-  // 6) Inicializar
+  // Inicializamos
   attachModalDelete();
   attachInlineEdit();
 });
