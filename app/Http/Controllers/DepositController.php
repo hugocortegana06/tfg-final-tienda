@@ -1,13 +1,11 @@
 <?php
-// app/Http/Controllers/DepositController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Deposit;
 use App\Models\Client;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf; // alias de Dompdf
-
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class DepositController extends Controller
 {
@@ -20,13 +18,15 @@ class DepositController extends Controller
         // per_page en sesión
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) $pp = 10;
+            if (! in_array($pp, [5,10,15,20])) {
+                $pp = 10;
+            }
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
 
         // Query base
-        $query = Deposit::with(['client','user','lastModifier'])
+        $query = Deposit::with(['client','creator','lastModifier'])
             ->whereNotIn('status', ['Finalizado','Entregado'])
             ->orderBy('created_at','desc');
 
@@ -41,7 +41,7 @@ class DepositController extends Controller
         // Paginación
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page'=>$perPage,'search'=>$search]);
+            ->appends(['per_page' => $perPage, 'search' => $search]);
 
         // Si es AJAX devolvemos solo la tabla partial
         if ($request->ajax()) {
@@ -73,10 +73,12 @@ class DepositController extends Controller
             'problem_description' => 'required|string',
             'more_info'           => 'nullable|string',
             'unlock_password'     => 'nullable|string',
+            'budget'              => 'nullable|numeric',
+            'pin_or_password'    => 'nullable|string|max:255',
             'status'              => 'required|in:En curso,Electrónico,Finalizado,Entregado',
         ]);
 
-        // Asignar creadores
+        // Asignar creadores y fechas
         $data['user_id']                   = auth()->id();
         $data['last_modification_user_id'] = auth()->id();
         $data['date_in']                   = now()->toDateString();
@@ -90,7 +92,7 @@ class DepositController extends Controller
     }
 
     /**
-     * 4) Inline-update (status, date_out, more_info).
+     * 4) Inline-update (status, date_out, more_info, budget).
      */
     public function update(Request $request, Deposit $deposit)
     {
@@ -98,19 +100,20 @@ class DepositController extends Controller
             'status'    => 'required|in:En curso,Electrónico,Finalizado,Entregado',
             'date_out'  => 'nullable|date',
             'more_info' => 'nullable|string',
+            'budget'    => 'nullable|numeric',
+            'pin_or_password'    => 'nullable|string|max:255'
         ]);
-    
-        // Si el nuevo estado es "Entregado" y aún no tiene fecha de salida,
-        // fijamos date_out a la fecha actual.
+
+        // Si cambia a "Entregado" y no tenía date_out, lo fijamos hoy
         if ($data['status'] === 'Entregado' && is_null($deposit->date_out)) {
             $data['date_out'] = now()->toDateString();
         }
-    
-        // Actualizamos quién modificó por última vez
+
+        // Registrar quién modificó por última vez
         $data['last_modification_user_id'] = auth()->id();
-    
+
         $deposit->update($data);
-    
+
         return response()->json(['message' => 'Depósito actualizado correctamente']);
     }
 
@@ -120,6 +123,7 @@ class DepositController extends Controller
     public function destroy(Deposit $deposit)
     {
         $deposit->delete();
+
         return redirect()
             ->back()
             ->with('success','Depósito eliminado correctamente');
@@ -130,15 +134,16 @@ class DepositController extends Controller
      */
     public function finalizados(Request $request)
     {
-        // idéntica lógica de per_page + búsqueda
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) $pp = 10;
+            if (! in_array($pp, [5,10,15,20])) {
+                $pp = 10;
+            }
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
 
-        $query = Deposit::with(['client','user','lastModifier'])
+        $query = Deposit::with(['client','creator','lastModifier'])
             ->where('status','Finalizado')
             ->orderBy('created_at','desc');
 
@@ -151,7 +156,7 @@ class DepositController extends Controller
 
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page'=>$perPage,'search'=>$search]);
+            ->appends(['per_page' => $perPage, 'search' => $search]);
 
         return view('deposits.finalizados', compact('deposits','perPage','search'));
     }
@@ -161,15 +166,16 @@ class DepositController extends Controller
      */
     public function finalizadosPartial(Request $request)
     {
-        // misma lógica de filtrado / paginación
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) $pp = 10;
+            if (! in_array($pp, [5,10,15,20])) {
+                $pp = 10;
+            }
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
 
-        $query = Deposit::with(['client','user','lastModifier'])
+        $query = Deposit::with(['client','creator','lastModifier'])
             ->where('status','Finalizado')
             ->orderBy('created_at','desc');
 
@@ -182,25 +188,26 @@ class DepositController extends Controller
 
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page'=>$perPage,'search'=>$search]);
+            ->appends(['per_page' => $perPage, 'search' => $search]);
 
-            return view('deposits.partials.table_finalizados', compact('deposits'))->render();
-        }
+        return view('deposits.partials.table_finalizados', compact('deposits'))->render();
+    }
 
     /**
      * 8) Página de “Entregados”.
      */
     public function entregados(Request $request)
     {
-        // per_page
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) $pp = 10;
+            if (! in_array($pp, [5,10,15,20])) {
+                $pp = 10;
+            }
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
 
-        $query = Deposit::with(['client','user','lastModifier'])
+        $query = Deposit::with(['client','creator','lastModifier'])
             ->where('status','Entregado')
             ->orderBy('created_at','desc');
 
@@ -213,7 +220,7 @@ class DepositController extends Controller
 
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page'=>$perPage,'search'=>$search]);
+            ->appends(['per_page' => $perPage, 'search' => $search]);
 
         return view('deposits.entregados', compact('deposits','perPage','search'));
     }
@@ -223,15 +230,16 @@ class DepositController extends Controller
      */
     public function entregadosPartial(Request $request)
     {
-        // idéntica lógica a entregados()
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) $pp = 10;
+            if (! in_array($pp, [5,10,15,20])) {
+                $pp = 10;
+            }
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
 
-        $query = Deposit::with(['client','user','lastModifier'])
+        $query = Deposit::with(['client','creator','lastModifier'])
             ->where('status','Entregado')
             ->orderBy('created_at','desc');
 
@@ -244,24 +252,26 @@ class DepositController extends Controller
 
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page'=>$perPage,'search'=>$search]);
+            ->appends(['per_page' => $perPage, 'search' => $search]);
 
         return view('deposits.partials.table_entregados', compact('deposits'))->render();
     }
+
+    /**
+     * 10) Generar etiqueta (PDF).
+     */
     public function label(Deposit $deposit)
     {
-        // Carga una vista blade que formatea la etiqueta
         $pdf = Pdf::loadView('deposits.label', compact('deposit'));
-
-        // Fuerza descarga con nombre etiqueta_{id}.pdf
         return $pdf->download("etiqueta_{$deposit->id}.pdf");
     }
+
+    /**
+     * 11) Generar factura (PDF).
+     */
     public function invoice(Deposit $deposit)
     {
-        // Carga la vista que contiene los 3 recuadros
         $pdf = Pdf::loadView('deposits.invoice', compact('deposit'));
-
-        // Descarga el PDF con nombre factura_{id}.pdf
         return $pdf->download("factura_{$deposit->id}.pdf");
     }
 }

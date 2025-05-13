@@ -29,11 +29,14 @@
         <form action="{{ route('deposits.destroy', $d->id) }}"
               method="POST"
               class="deleteForm d-inline">
+
+          @if(auth()->user()->role === 'admin')
           @csrf @method('DELETE')
           <button type="button" class="btn btn-sm btn-danger btn-delete">
             Eliminar
           </button>
         </form>
+          @endif
       </td>
     </tr>
   @endforeach

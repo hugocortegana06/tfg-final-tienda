@@ -110,6 +110,36 @@
                 class="form-control" rows="2">{{ old('more_info') }}</textarea>
     </div>
 
+    
+  {{-- NUEVO campo PIN o Contraseña (opcional) --}}
+  <div class="mb-3">
+    <label for="pin_or_password" class="form-label">PIN o Contraseña (opcional)</label>
+    <input
+      type="text"
+      name="pin_or_password"
+      id="pin_or_password"
+      class="form-control"
+      value="{{ old('pin_or_password') }}"
+    >
+  </div>
+
+    {{-- **Nuevo: Presupuesto (opcional)** --}}
+  <div class="mb-3">
+    <label for="budget" class="form-label">Presupuesto (€)</label>
+    <input
+      type="number"
+      name="budget"
+      id="budget"
+      class="form-control"
+      step="0.01"
+      min="0"
+      value="{{ old('budget') }}"
+    >
+    <small class="form-text text-muted">
+      Introduce el presupuesto en euros (opcional).
+    </small>
+  </div>
+
     {{-- Estado --}}
     <div class="mb-3">
       <label for="status" class="form-label">Estado</label>

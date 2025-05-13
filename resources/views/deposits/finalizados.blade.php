@@ -80,10 +80,14 @@
               method="POST"
               class="d-inline"
             >
+
               @csrf
+              @if(auth()->user()->role === 'admin')
+
               @method('DELETE')
               <button type="button" class="btn btn-sm btn-danger btn-delete">Eliminar</button>
             </form>
+              @endif
             <button class="btn btn-sm btn-success btn-notify ms-1">Notificar</button>
           </td>
         </tr>

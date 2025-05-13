@@ -195,11 +195,18 @@ document.addEventListener('DOMContentLoaded', () => {
       <dt class="col-sm-3">Problema</dt><dd class="col-sm-9">${info.problem_description}</dd>
       <dt class="col-sm-3">Info Adic.</dt><dd class="col-sm-9">${info.more_info ?? 'N/A'}</dd>
       <dt class="col-sm-3">Patrón</dt><dd class="col-sm-9">${info.unlock_password ? info.unlock_password : 'N/A'}</dd>
+      <dt class="col-sm-3">Pin o contraseña</dt><dd class="col-sm-9">${info.pin_or_password ?? 'N/A'}</dd>
       <dt class="col-sm-3">Estado</dt><dd class="col-sm-9">${info.status}</dd>
       <dt class="col-sm-3">Fecha Entrada</dt><dd class="col-sm-9">${info.date_in}</dd>
       <dt class="col-sm-3">Fecha Salida</dt><dd class="col-sm-9">${info.date_out ?? 'N/A'}</dd>
       <dt class="col-sm-3">Creado por</dt><dd class="col-sm-9">${info.creator ?? 'N/A'}</dd>
       <dt class="col-sm-3">Última modif.</dt><dd class="col-sm-9">${info.last_modifier ?? 'N/A'}</dd>
+      
+      <!-- NUEVO: Presupuesto -->
+      <dt class="col-sm-3">Presupuesto</dt>
+      <dd class="col-sm-9">
+        ${info.budget !== null ? info.budget.toFixed(2) + ' €' : 'N/A'}
+      </dd>
     `;
 
     // Dibuja patrón si existe, resaltando inicio en verde y mostrando índice

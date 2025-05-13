@@ -26,6 +26,10 @@
           'date_out'            => $d->date_out,
           'creator'             => optional($d->creator)->name,
           'last_modifier'       => optional($d->lastModifier)->name,
+          'budget'              => $d->budget,
+          'pin_or_password'     => $d->pin_or_password,      // ← AQUÍ
+
+
         ];
         $json = json_encode($details, JSON_HEX_APOS|JSON_UNESCAPED_UNICODE);
       @endphp

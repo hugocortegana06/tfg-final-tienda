@@ -12,7 +12,9 @@ class Deposit extends Model
         'client_phone', 'user_id',
         'brand', 'model', 'serial_number',
         'problem_description', 'more_info',
-        'unlock_password', // secuencia de patrón opcional
+        'unlock_password',
+        'pin_or_password', 
+        'budget',                        // ← lo añadimos aquí
         'status', 'date_in', 'date_out',
         'last_modification_user_id',  // <— aquí
 
