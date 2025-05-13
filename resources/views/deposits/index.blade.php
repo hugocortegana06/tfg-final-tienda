@@ -133,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <option ${old==='En curso'    ?'selected':''}>En curso</option>
             <option ${old==='Electrónico' ?'selected':''}>Electrónico</option>
             <option ${old==='Finalizado'  ?'selected':''}>Finalizado</option>
-            <option ${old==='Entregado'   ?'selected':''}>Entregado</option>
           </select>`;
         btn.textContent = 'Guardar';
         btn.classList.replace('btn-info','btn-success');

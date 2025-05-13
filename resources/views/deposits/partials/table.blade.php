@@ -12,7 +12,7 @@
   <tbody>
     @foreach($deposits as $d)
       @php
-        // Preparamos un JSON seguro: escapamos apóstrofos y dejamos comillas dobles intactas
+        // Preparamos un JSON seguro para el modal de información
         $details = [
           'id'                  => $d->id,
           'client'              => $d->client->name.' '.$d->client->surname,
@@ -27,7 +27,6 @@
           'creator'             => optional($d->creator)->name,
           'last_modifier'       => optional($d->lastModifier)->name,
         ];
-        // JSON_HEX_APOS evita apóstrofos; JSON_UNESCAPED_UNICODE mantiene acentos
         $json = json_encode($details, JSON_HEX_APOS|JSON_UNESCAPED_UNICODE);
       @endphp
 
@@ -44,12 +43,18 @@
             + Información
           </button>
           <button class="btn btn-sm btn-info btn-edit me-1">Editar</button>
-          <form action="{{ route('deposits.destroy', $d) }}" method="POST" class="d-inline">
-            @csrf @method('DELETE')
-            <button type="button" class="btn btn-sm btn-danger btn-delete">
-              Eliminar
-            </button>
-          </form>
+
+          {{-- Solo muestra “Eliminar” a admin --}}
+          @if(auth()->user()->role === 'admin')
+            <form action="{{ route('deposits.destroy', $d) }}" method="POST" class="d-inline">
+              @csrf
+              @method('DELETE')
+              <button type="button" class="btn btn-sm btn-danger btn-delete">
+                Eliminar
+              </button>
+            </form>
+          @endif
+
           <a href="{{ route('deposits.invoice', $d->id) }}" class="btn btn-sm btn-warning">
             Generar Factura
           </a>

@@ -57,9 +57,7 @@
       color: #555;
       line-height: 1.4;
     }
-    .section p strong {
-      color: #007bff;
-    }
+    
   </style>
 </head>
 <body>
@@ -68,8 +66,9 @@
     <div class="section">
       <h2>Datos Personales</h2>
       <p><strong>Nombre:</strong> {{ $deposit->client->name }} {{ $deposit->client->surname }}</p>
-      <p><strong>DNI:</strong> {{ $deposit->client->dni }}</p>
       <p><strong>Teléfono:</strong> {{ $deposit->client->phone }}</p>
+      <p><strong>Teléfono alternativo:</strong> {{ $deposit->client->phone_2 }}</p>
+
     </div>
 
     <!-- Datos Dispositivo -->

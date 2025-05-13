@@ -1,0 +1,86 @@
+:root {
+    --color-white: #FFFFFF;
+    --color-gray-light: #F0F0F0;
+    --color-blue-light: #20a1cc; /* Azul más definido */
+    --font-family-main: "Helvetica", "Arial", sans-serif;
+  }
+  
+  /* Fondos */
+  .bg-white {
+    background-color: var(--color-white) !important;
+  }
+  
+  .bg-gray-light {
+    background-color: var(--color-gray-light) !important;
+  }
+  
+  .bg-light-blue {
+    background-color: var(--color-blue-light) !important;
+  }
+  
+  /* Texto */
+  .text-light-blue {
+    color: var(--color-blue-light) !important;
+  }
+  
+  /* Animación Fade-In */
+  .fade-in {
+    animation: fadeIn 0.7s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  
+  /* Botón Personalizado */
+  .btn-light-blue {
+    background-color: var(--color-blue-light);
+    color: #fff;
+    border: none;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 10px 20px; /* Añadido padding para mejor apariencia */
+    border-radius: 5px; /* Añadido border-radius para esquinas redondeadas */
+  }
+  
+  .btn-light-blue:hover {
+    background-color: #1b89ad; /* azul ligeramente más oscuro para hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0.9; /* Efecto de opacidad al hover */
+  }
+  
+  .btn-light-blue:active {
+    transform: scale(0.98);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Efecto de sombra interna al hover */
+  .btn-light-blue:hover {
+      background-color: #1b89ad;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Cambio de borde al hover */
+  .btn-light-blue:hover {
+      background-color: #1b89ad;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+      border: 2px solid #1b89ad;
+  }
+  
+  /* Efecto de escala sutil al hover */
+  .btn-light-blue:hover {
+      background-color: #1b89ad;
+      transform: scale(1.05);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Efecto de gradiente al hover */
+  .btn-light-blue:hover {
+      background: linear-gradient(to bottom, #1b89ad, #20a1cc);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
