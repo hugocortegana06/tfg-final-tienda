@@ -6,6 +6,7 @@
       <th>Estado</th>
       <th>Dispositivo</th>
       <th>Cliente</th>
+      <th>Notas de trabajo</th>
       <th>Acciones</th>
     </tr>
   </thead>
@@ -27,7 +28,9 @@
           'creator'             => optional($d->creator)->name,
           'last_modifier'       => optional($d->lastModifier)->name,
           'budget'              => $d->budget,
-          'pin_or_password'     => $d->pin_or_password,      // ← AQUÍ
+          'pin_or_password'     => $d->pin_or_password,
+          'work_notes'          => $d->work_notes,
+          'under_warranty'      => $d->under_warranty,     
 
 
         ];
@@ -42,6 +45,7 @@
         <td class="dep-status">{{ $d->status }}</td>
         <td>{{ $d->brand }} {{ $d->model }}</td>
         <td>{{ $d->client->name }} {{ $d->client->surname }}</td>
+        <td class="work-notes">{{ $d->work_notes ?? 'N/A' }}</td>
         <td>
           <button class="btn btn-sm btn-secondary btn-info-detail me-1">
             + Información

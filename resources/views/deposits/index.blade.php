@@ -121,61 +121,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Inline‐edit status
   function attachInlineEdit() {
-    document.querySelectorAll('.btn-edit').forEach(btn => {
-      btn.onclick = () => {
-        const row = btn.closest('tr'),
-              id  = row.dataset.id,
-              td  = row.querySelector('.dep-status'),
-              old = td.textContent.trim();
+  document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.onclick = () => {
+      const row       = btn.closest('tr'),
+            id        = row.dataset.id,
+            tdStatus  = row.querySelector('.dep-status'),
+            tdNotes   = row.querySelector('.work-notes'),
+            oldStatus = tdStatus.textContent.trim(),
+            oldNotes  = tdNotes.textContent.trim();
 
-        td.innerHTML = `
-          <select class="form-select form-select-sm">
-            <option ${old==='En curso'    ?'selected':''}>En curso</option>
-            <option ${old==='Electrónico' ?'selected':''}>Electrónico</option>
-            <option ${old==='Finalizado'  ?'selected':''}>Finalizado</option>
-          </select>`;
-        btn.textContent = 'Guardar';
-        btn.classList.replace('btn-info','btn-success');
+      // 1) Convertimos el estado en un <select>
+      tdStatus.innerHTML = `
+        <select class="form-select form-select-sm">
+          <option ${oldStatus==='En curso'    ?'selected':''}>En curso</option>
+          <option ${oldStatus==='Electrónico' ?'selected':''}>Electrónico</option>
+          <option ${oldStatus==='Finalizado'  ?'selected':''}>Finalizado</option>
+          <option ${oldStatus==='Entregado'   ?'selected':''}>Entregado</option>
+        </select>`;
 
-        const cancel = document.createElement('button');
-        cancel.type = 'button';
-        cancel.textContent = 'Cancelar';
-        cancel.className = 'btn btn-sm btn-secondary ms-2';
-        btn.after(cancel);
+      // 2) Convertimos la nota en un <input>, vacío si antes era 'N/A'
+      tdNotes.innerHTML = `
+        <input
+          type="text"
+          class="form-control form-control-sm"
+          value="${oldNotes==='N/A' ? '' : oldNotes}"
+          placeholder="Notas de trabajo"
+        >`;
 
-        btn.onclick    = save;
-        cancel.onclick = () => { td.textContent = old; teardown(); };
+      // 3) Cambiamos el botón a 'Guardar' y añadimos 'Cancelar'
+      btn.textContent = 'Guardar';
+      btn.classList.replace('btn-info','btn-success');
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.textContent = 'Cancelar';
+      cancel.className = 'btn btn-sm btn-secondary ms-2';
+      btn.after(cancel);
 
-        function teardown() {
-          btn.textContent = 'Editar';
-          btn.classList.replace('btn-success','btn-info');
-          cancel.remove();
-          attachInlineEdit();
-        }
-        function save() {
-          const nv = td.querySelector('select').value;
-          fetch(`/deposits/${id}`, {
-            method:'PATCH',
-            headers:{
-              'Content-Type':'application/json',
-              'X-CSRF-TOKEN':'{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ status: nv })
-          })
-          .then(r => r.ok ? r.json() : Promise.reject())
-          .then(data => {
-            td.textContent = nv;
-            teardown();
-            flash(data.message,'success');
-          })
-          .catch(() => {
-            teardown();
-            flash('Error al actualizar','danger');
-          });
-        }
+      // 4) Hijack del click para guardar
+      btn.onclick    = save;
+      cancel.onclick = () => {
+        // si cancelas, restauras lo anterior
+        tdStatus.textContent = oldStatus;
+        tdNotes.textContent  = oldNotes;
+        teardown();
       };
-    });
-  }
+
+      function teardown() {
+        btn.textContent = 'Editar';
+        btn.classList.replace('btn-success','btn-info');
+        cancel.remove();
+        // vuelves a enganchar a todos los Editar
+        attachInlineEdit();
+      }
+
+      function save() {
+        const newStatus = tdStatus.querySelector('select').value,
+              newNotes  = tdNotes.querySelector('input').value.trim();
+
+        fetch(`/deposits/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type':'application/json',
+            'X-CSRF-TOKEN':'{{ csrf_token() }}'
+          },
+          body: JSON.stringify({
+            status:     newStatus,
+            work_notes: newNotes || null   // si queda vacío, mandamos null
+          })
+        })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          // reflejas los nuevos valores
+          tdStatus.textContent = newStatus;
+          tdNotes.textContent  = newNotes || 'N/A';
+          teardown();
+          flash(data.message,'success');
+        })
+        .catch(() => {
+          // en caso de error, restauras original
+          tdStatus.textContent = oldStatus;
+          tdNotes.textContent  = oldNotes;
+          teardown();
+          flash('Error al actualizar','danger');
+        });
+      }
+    };
+  });
+}
+
 
   // “+ Información” button
   document.addEventListener('click', e => {
@@ -197,6 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
       <dt class="col-sm-3">Patrón</dt><dd class="col-sm-9">${info.unlock_password ? info.unlock_password : 'N/A'}</dd>
       <dt class="col-sm-3">Pin o contraseña</dt><dd class="col-sm-9">${info.pin_or_password ?? 'N/A'}</dd>
       <dt class="col-sm-3">Estado</dt><dd class="col-sm-9">${info.status}</dd>
+      <dt class="col-sm-3">Garantía</dt>
+      <dd class="col-sm-9 text-danger">${info.under_warranty ? 'Sí' : 'No'}</dd>
       <dt class="col-sm-3">Fecha Entrada</dt><dd class="col-sm-9">${info.date_in}</dd>
       <dt class="col-sm-3">Fecha Salida</dt><dd class="col-sm-9">${info.date_out ?? 'N/A'}</dd>
       <dt class="col-sm-3">Creado por</dt><dd class="col-sm-9">${info.creator ?? 'N/A'}</dd>

@@ -90,11 +90,20 @@
 
     <div class="section">
       <h2>Descripción del Problema</h2>
-      <p>{{ $deposit->problem_description }}</p>
       @if($deposit->more_info)
         <p><em>Info adicional:</em> {{ $deposit->more_info }}</p>
       @endif
     </div>
+
+
+    <div class="section">
+      <h2>Presupuesto</h2>
+      
+      @if($deposit->more_info)
+        <p><em>Presupuesto:</em> {{ $deposit->budget }} €</p>
+      @endif
+    </div>
+
   </div>
 </body>
 </html>

@@ -123,22 +123,40 @@
     >
   </div>
 
-    {{-- **Nuevo: Presupuesto (opcional)** --}}
-  <div class="mb-3">
-    <label for="budget" class="form-label">Presupuesto (€)</label>
-    <input
-      type="number"
-      name="budget"
-      id="budget"
-      class="form-control"
-      step="0.01"
-      min="0"
-      value="{{ old('budget') }}"
-    >
-    <small class="form-text text-muted">
-      Introduce el presupuesto en euros (opcional).
-    </small>
-  </div>
+  {{-- **Nuevo: Presupuesto (opcional) y En garantía** --}}
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="budget" class="form-label">Presupuesto (€)</label>
+        <input
+          type="number"
+          name="budget"
+          id="budget"
+          class="form-control"
+          step="0.01"
+          min="0"
+          value="{{ old('budget') }}"
+        >
+        <small class="form-text text-muted">
+          Introduce el presupuesto en euros (opcional).
+        </small>
+      </div>
+      <div class="col-md-6 d-flex align-items-center">
+        <div class="form-check mt-4">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            name="under_warranty"
+            id="under_warranty"
+            value="1"
+            {{ old('under_warranty') ? 'checked' : '' }}
+          >
+          <label class="form-check-label" for="under_warranty">
+            En garantía
+          </label>
+        </div>
+      </div>
+    </div>
+
 
     {{-- Estado --}}
     <div class="mb-3">

@@ -14,9 +14,11 @@ class Deposit extends Model
         'problem_description', 'more_info',
         'unlock_password',
         'pin_or_password', 
-        'budget',                        // ← lo añadimos aquí
+        'budget',                        
         'status', 'date_in', 'date_out',
-        'last_modification_user_id',  // <— aquí
+        'work_notes',
+        'under_warranty',               
+        'last_modification_user_id',  
 
     ];
 

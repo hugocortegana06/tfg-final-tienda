@@ -75,7 +75,11 @@ class DepositController extends Controller
             'unlock_password'     => 'nullable|string',
             'budget'              => 'nullable|numeric',
             'pin_or_password'    => 'nullable|string|max:255',
+            'work_notes'          => 'nullable|string',    // ← aquí
+
             'status'              => 'required|in:En curso,Electrónico,Finalizado,Entregado',
+            'under_warranty'  => 'sometimes|boolean',
+
         ]);
 
         // Asignar creadores y fechas
@@ -83,6 +87,8 @@ class DepositController extends Controller
         $data['last_modification_user_id'] = auth()->id();
         $data['date_in']                   = now()->toDateString();
         $data['date_out']                  = null;
+        $data['under_warranty'] = $request->boolean('under_warranty');
+
 
         Deposit::create($data);
 
@@ -101,8 +107,13 @@ class DepositController extends Controller
             'date_out'  => 'nullable|date',
             'more_info' => 'nullable|string',
             'budget'    => 'nullable|numeric',
-            'pin_or_password'    => 'nullable|string|max:255'
+            'pin_or_password'    => 'nullable|string|max:255',
+            'work_notes'  => 'nullable|string',
+            'under_warranty'  => 'sometimes|boolean',
+
         ]);
+        $data['under_warranty'] = $request->boolean('under_warranty');
+
 
         // Si cambia a "Entregado" y no tenía date_out, lo fijamos hoy
         if ($data['status'] === 'Entregado' && is_null($deposit->date_out)) {
