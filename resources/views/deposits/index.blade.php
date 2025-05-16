@@ -152,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <option ${oldStatus==='En curso'    ? 'selected':''}>En curso</option>
             <option ${oldStatus==='Electrónico' ? 'selected':''}>Electrónico</option>
             <option ${oldStatus==='Finalizado'  ? 'selected':''}>Finalizado</option>
-            <option ${oldStatus==='Entregado'   ? 'selected':''}>Entregado</option>
           </select>`;
 
         // 2) Notas → input (vacío si era N/A)
