@@ -14,40 +14,77 @@
     </tr>
   </thead>
   <tbody>
-  @foreach($deposits as $d)
-    <tr data-id="{{ $d->id }}">
-      <td>{{ $d->id }}</td>
-      <td class="dep-status">{{ $d->status }}</td>
-      <td>{{ $d->brand }} {{ $d->model }}</td>
-      <td>{{ $d->client->name }} {{ $d->client->surname }}</td>
-      <td>{{ \Illuminate\Support\Carbon::parse($d->date_in)->format('d/m/Y') }}</td>
-      <td>{{ $d->date_out ? \Illuminate\Support\Carbon::parse($d->date_out)->format('d/m/Y') : '—' }}</td>
-      <td>{{ optional($d->creator)->name ?? '—' }}</td>
-      <td>{{ optional($d->deliverer)->name ?? '—' }}</td>
-      <td>
-        <button class="btn btn-sm btn-info btn-edit">Editar</button>
-        <form action="{{ route('deposits.destroy', $d->id) }}"
-              method="POST"
-              class="deleteForm d-inline">
+    @foreach($deposits as $d)
+      @php
+        $details = [
+          'id'               => $d->id,
+          'client'           => $d->client->name.' '.$d->client->surname,
+          'dispositivo'      => $d->brand.' '.$d->model,
+          'serial_number'    => $d->serial_number,
+          'problem_description' => $d->problem_description,
+          'more_info'        => $d->more_info,
+          'unlock_password'  => $d->unlock_password,
+          'pin_or_password'  => $d->pin_or_password,
+          'work_notes'       => $d->work_notes,
+          'status'           => $d->status,
+          'under_warranty'   => (bool)$d->under_warranty,
+          'date_in'          => $d->date_in,
+          'date_out'         => $d->date_out,
+          'budget'           => $d->budget,
+          'creator'          => optional($d->creator)->name,
+          'deliverer'        => optional($d->deliverer)->name,
+          'last_modifier'    => optional($d->lastModifier)->name,
+        ];
+        $jsonDetails = json_encode($details, JSON_HEX_APOS|JSON_UNESCAPED_UNICODE);
+      @endphp
+
+      <tr 
+        data-id="{{ $d->id }}"
+        data-details='{!! $jsonDetails !!}'
+      >
+        <td>{{ $d->id }}</td>
+        <td class="dep-status">{{ $d->status }}</td>
+        <td>{{ $d->brand }} {{ $d->model }}</td>
+        <td>{{ $d->client->name }} {{ $d->client->surname }}</td>
+        <td>{{ \Illuminate\Support\Carbon::parse($d->date_in)->format('d/m/Y') }}</td>
+        <td>
+          {{ $d->date_out 
+              ? \Illuminate\Support\Carbon::parse($d->date_out)->format('d/m/Y') 
+              : '—' 
+          }}
+        </td>
+        <td>{{ optional($d->creator)->name ?? '—' }}</td>
+        <td>{{ optional($d->deliverer)->name ?? '—' }}</td>
+        <td>
+          {{-- + Información (siempre visible) --}}
+          <button class="btn btn-sm btn-secondary btn-info-detail me-1">
+            + Información
+          </button>
 
           @if(auth()->user()->role === 'admin')
-          @csrf @method('DELETE')
-          <button type="button" class="btn btn-sm btn-danger btn-delete">
-            Eliminar
-          </button>
-        </form>
+            {{-- Editar --}}
+            <button class="btn btn-sm btn-info btn-edit me-1">Editar</button>
+            {{-- Eliminar --}}
+            <form 
+              action="{{ route('deposits.destroy', $d->id) }}" 
+              method="POST" 
+              class="d-inline deleteForm"
+            >
+              @csrf 
+              @method('DELETE')
+              <button type="button" class="btn btn-sm btn-danger btn-delete">
+                Eliminar
+              </button>
+            </form>
           @endif
-      </td>
-    </tr>
-  @endforeach
+        </td>
+      </tr>
+    @endforeach
   </tbody>
 </table>
 
 <div class="d-flex justify-content-end">
   {{ $deposits
-      ->links('pagination::bootstrap-5', [
-        'paginator' => $deposits,
-        'class'     => 'pagination-sm'
-      ])
+      ->links('pagination::bootstrap-5', ['class'=>'pagination-sm'])
   }}
 </div>

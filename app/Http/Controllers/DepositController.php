@@ -11,7 +11,7 @@ class DepositController extends Controller
 {
     /**
      * 1) Listar depósitos activos (excluye Finalizado y Entregado),
-     *    con búsqueda por cliente y paginación.
+     *    con búsqueda por cliente, filtro de garantía y paginación.
      */
     public function index(Request $request)
     {
@@ -38,17 +38,28 @@ class DepositController extends Controller
             });
         }
 
-        // Paginación
+        // Filtro “sólo garantía”
+        $warranty = $request->get('warranty');
+        if ($warranty) {
+            $query->where('under_warranty', 1);
+        }
+
+        // Paginación (conservamos search, per_page y warranty)
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage, 'search' => $search]);
+            ->appends([
+                'per_page' => $perPage,
+                'search'   => $search,
+                'warranty' => $warranty,
+            ]);
 
-        // Si es AJAX devolvemos solo la tabla partial
+        // Si es AJAX devolvemos sólo la tabla partial
         if ($request->ajax()) {
             return view('deposits.partials.table', compact('deposits'))->render();
         }
 
-        return view('deposits.index', compact('deposits','perPage','search'));
+        // Vista completa
+        return view('deposits.index', compact('deposits','perPage','search','warranty'));
     }
 
     /**
@@ -74,12 +85,10 @@ class DepositController extends Controller
             'more_info'           => 'nullable|string',
             'unlock_password'     => 'nullable|string',
             'budget'              => 'nullable|numeric',
-            'pin_or_password'    => 'nullable|string|max:255',
-            'work_notes'          => 'nullable|string',    // ← aquí
-
+            'pin_or_password'     => 'nullable|string|max:255',
+            'work_notes'          => 'nullable|string',
+            'under_warranty'      => 'sometimes|boolean',
             'status'              => 'required|in:En curso,Electrónico,Finalizado,Entregado',
-            'under_warranty'  => 'sometimes|boolean',
-
         ]);
 
         // Asignar creadores y fechas
@@ -87,8 +96,7 @@ class DepositController extends Controller
         $data['last_modification_user_id'] = auth()->id();
         $data['date_in']                   = now()->toDateString();
         $data['date_out']                  = null;
-        $data['under_warranty'] = $request->boolean('under_warranty');
-
+        $data['under_warranty']            = $request->boolean('under_warranty');
 
         Deposit::create($data);
 
@@ -98,22 +106,20 @@ class DepositController extends Controller
     }
 
     /**
-     * 4) Inline-update (status, date_out, more_info, budget).
+     * 4) Inline‐update (status, date_out, more_info, budget…).
      */
     public function update(Request $request, Deposit $deposit)
     {
         $data = $request->validate([
-            'status'    => 'required|in:En curso,Electrónico,Finalizado,Entregado',
-            'date_out'  => 'nullable|date',
-            'more_info' => 'nullable|string',
-            'budget'    => 'nullable|numeric',
-            'pin_or_password'    => 'nullable|string|max:255',
-            'work_notes'  => 'nullable|string',
-            'under_warranty'  => 'sometimes|boolean',
-
+            'status'            => 'required|in:En curso,Electrónico,Finalizado,Entregado',
+            'date_out'          => 'nullable|date',
+            'more_info'         => 'nullable|string',
+            'budget'            => 'nullable|numeric',
+            'pin_or_password'   => 'nullable|string|max:255',
+            'work_notes'        => 'nullable|string',
+            'under_warranty'    => 'sometimes|boolean',
         ]);
         $data['under_warranty'] = $request->boolean('under_warranty');
-
 
         // Si cambia a "Entregado" y no tenía date_out, lo fijamos hoy
         if ($data['status'] === 'Entregado' && is_null($deposit->date_out)) {
@@ -145,11 +151,10 @@ class DepositController extends Controller
      */
     public function finalizados(Request $request)
     {
+        // lógica idéntica de per_page + búsqueda…
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) {
-                $pp = 10;
-            }
+            if (! in_array($pp, [5,10,15,20])) $pp = 10;
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
@@ -167,7 +172,7 @@ class DepositController extends Controller
 
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage, 'search' => $search]);
+            ->appends(['per_page'=>$perPage,'search'=>$search]);
 
         return view('deposits.finalizados', compact('deposits','perPage','search'));
     }
@@ -177,11 +182,10 @@ class DepositController extends Controller
      */
     public function finalizadosPartial(Request $request)
     {
+        // misma lógica de finalizados()
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) {
-                $pp = 10;
-            }
+            if (! in_array($pp, [5,10,15,20])) $pp = 10;
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
@@ -199,7 +203,7 @@ class DepositController extends Controller
 
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage, 'search' => $search]);
+            ->appends(['per_page'=>$perPage,'search'=>$search]);
 
         return view('deposits.partials.table_finalizados', compact('deposits'))->render();
     }
@@ -209,11 +213,10 @@ class DepositController extends Controller
      */
     public function entregados(Request $request)
     {
+        // lógica idéntica de entregados()
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) {
-                $pp = 10;
-            }
+            if (! in_array($pp, [5,10,15,20])) $pp = 10;
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
@@ -231,7 +234,7 @@ class DepositController extends Controller
 
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage, 'search' => $search]);
+            ->appends(['per_page'=>$perPage,'search'=>$search]);
 
         return view('deposits.entregados', compact('deposits','perPage','search'));
     }
@@ -241,11 +244,10 @@ class DepositController extends Controller
      */
     public function entregadosPartial(Request $request)
     {
+        // misma lógica de entregados()
         if ($request->has('per_page')) {
             $pp = (int)$request->per_page;
-            if (! in_array($pp, [5,10,15,20])) {
-                $pp = 10;
-            }
+            if (! in_array($pp, [5,10,15,20])) $pp = 10;
             session(['deposits.per_page' => $pp]);
         }
         $perPage = session('deposits.per_page', 10);
@@ -263,7 +265,7 @@ class DepositController extends Controller
 
         $deposits = $query
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage, 'search' => $search]);
+            ->appends(['per_page'=>$perPage,'search'=>$search]);
 
         return view('deposits.partials.table_entregados', compact('deposits'))->render();
     }

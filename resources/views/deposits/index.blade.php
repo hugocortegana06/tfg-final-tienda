@@ -1,4 +1,3 @@
-
 {{-- resources/views/deposits/index.blade.php --}}
 @extends('layouts.app')
 
@@ -8,7 +7,7 @@
 <div class="container">
     <h1 class="mb-4">Depósitos</h1>
 
-    {{-- Top bar: per-page + búsqueda + añadir --}}
+    {{-- Top bar: per-page + búsqueda + filtro garantía + añadir --}}
     <div class="row mb-3 align-items-center">
         <div class="col-auto d-flex align-items-center">
             <label class="me-2 mb-0">Mostrar</label>
@@ -28,6 +27,13 @@
               value="{{ $search ?? '' }}"
               style="max-width:200px;"
             >
+
+            <button
+              id="warrantyBtn"
+              class="btn btn-sm {{ request()->boolean('warranty') ? 'btn-primary' : 'btn-outline-primary' }} ms-2"
+            >
+              Mostrar depósitos en garantía
+            </button>
         </div>
         <div class="col text-end">
             <a href="{{ route('deposits.create') }}" class="btn btn-sm btn-primary">
@@ -96,19 +102,29 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Helper flash
-  const flash = (msg, type = 'info') => {
+  // Estado inicial de filtro garantía
+  let warranty = {{ request()->boolean('warranty') ? 'true' : 'false' }};
+
+  // Elementos
+  const perPage     = document.getElementById('perPageSelect'),
+        search      = document.getElementById('searchInput'),
+        warrantyBtn = document.getElementById('warrantyBtn'),
+        container   = document.getElementById('tableContainer');
+
+  // Flash helper
+  const flash = (msg, type='info') => {
     const box = document.getElementById('updateMessage');
     box.className = 'alert mb-3 alert-' + type;
     box.textContent = msg;
     box.style.display = 'block';
     setTimeout(() => box.style.display = 'none', 3000);
   };
-  // Hide server success
+
+  // Ocultar mensaje del servidor
   const svr = document.getElementById('serverSuccess');
   if (svr) setTimeout(() => svr.style.display = 'none', 3000);
 
-  // Delete confirmation
+  // Confirmación de eliminación
   let curForm = null;
   document.addEventListener('click', e => {
     if (e.target.matches('.btn-delete')) {
@@ -119,96 +135,90 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnConfirmDelete')
     .addEventListener('click', () => curForm && curForm.submit());
 
-  // Inline‐edit status
+  // Inline‐edit status y work_notes
   function attachInlineEdit() {
-  document.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.onclick = () => {
-      const row       = btn.closest('tr'),
-            id        = row.dataset.id,
-            tdStatus  = row.querySelector('.dep-status'),
-            tdNotes   = row.querySelector('.work-notes'),
-            oldStatus = tdStatus.textContent.trim(),
-            oldNotes  = tdNotes.textContent.trim();
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.onclick = () => {
+        const row       = btn.closest('tr'),
+              id        = row.dataset.id,
+              tdStatus  = row.querySelector('.dep-status'),
+              tdNotes   = row.querySelector('.work-notes'),
+              oldStatus = tdStatus.textContent.trim(),
+              oldNotes  = tdNotes.textContent.trim();
 
-      // 1) Convertimos el estado en un <select>
-      tdStatus.innerHTML = `
-        <select class="form-select form-select-sm">
-          <option ${oldStatus==='En curso'    ?'selected':''}>En curso</option>
-          <option ${oldStatus==='Electrónico' ?'selected':''}>Electrónico</option>
-          <option ${oldStatus==='Finalizado'  ?'selected':''}>Finalizado</option>
-          <option ${oldStatus==='Entregado'   ?'selected':''}>Entregado</option>
-        </select>`;
+        // 1) Estado → select
+        tdStatus.innerHTML = `
+          <select class="form-select form-select-sm">
+            <option ${oldStatus==='En curso'    ? 'selected':''}>En curso</option>
+            <option ${oldStatus==='Electrónico' ? 'selected':''}>Electrónico</option>
+            <option ${oldStatus==='Finalizado'  ? 'selected':''}>Finalizado</option>
+            <option ${oldStatus==='Entregado'   ? 'selected':''}>Entregado</option>
+          </select>`;
 
-      // 2) Convertimos la nota en un <input>, vacío si antes era 'N/A'
-      tdNotes.innerHTML = `
-        <input
-          type="text"
-          class="form-control form-control-sm"
-          value="${oldNotes==='N/A' ? '' : oldNotes}"
-          placeholder="Notas de trabajo"
-        >`;
+        // 2) Notas → input (vacío si era N/A)
+        tdNotes.innerHTML = `
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            value="${oldNotes==='N/A' ? '' : oldNotes}"
+            placeholder="Notas de trabajo"
+          >`;
 
-      // 3) Cambiamos el botón a 'Guardar' y añadimos 'Cancelar'
-      btn.textContent = 'Guardar';
-      btn.classList.replace('btn-info','btn-success');
-      const cancel = document.createElement('button');
-      cancel.type = 'button';
-      cancel.textContent = 'Cancelar';
-      cancel.className = 'btn btn-sm btn-secondary ms-2';
-      btn.after(cancel);
+        // 3) Cambiar a Guardar + Cancelar
+        btn.textContent = 'Guardar';
+        btn.classList.replace('btn-info','btn-success');
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = 'Cancelar';
+        cancel.className = 'btn btn-sm btn-secondary ms-2';
+        btn.after(cancel);
 
-      // 4) Hijack del click para guardar
-      btn.onclick    = save;
-      cancel.onclick = () => {
-        // si cancelas, restauras lo anterior
-        tdStatus.textContent = oldStatus;
-        tdNotes.textContent  = oldNotes;
-        teardown();
-      };
-
-      function teardown() {
-        btn.textContent = 'Editar';
-        btn.classList.replace('btn-success','btn-info');
-        cancel.remove();
-        // vuelves a enganchar a todos los Editar
-        attachInlineEdit();
-      }
-
-      function save() {
-        const newStatus = tdStatus.querySelector('select').value,
-              newNotes  = tdNotes.querySelector('input').value.trim();
-
-        fetch(`/deposits/${id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type':'application/json',
-            'X-CSRF-TOKEN':'{{ csrf_token() }}'
-          },
-          body: JSON.stringify({
-            status:     newStatus,
-            work_notes: newNotes || null   // si queda vacío, mandamos null
-          })
-        })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => {
-          // reflejas los nuevos valores
-          tdStatus.textContent = newStatus;
-          tdNotes.textContent  = newNotes || 'N/A';
-          teardown();
-          flash(data.message,'success');
-        })
-        .catch(() => {
-          // en caso de error, restauras original
+        btn.onclick = save;
+        cancel.onclick = () => {
           tdStatus.textContent = oldStatus;
           tdNotes.textContent  = oldNotes;
           teardown();
-          flash('Error al actualizar','danger');
-        });
-      }
-    };
-  });
-}
+        };
 
+        function teardown() {
+          btn.textContent = 'Editar';
+          btn.classList.replace('btn-success','btn-info');
+          cancel.remove();
+          attachInlineEdit();
+        }
+
+        function save() {
+          const newStatus = tdStatus.querySelector('select').value,
+                newNotes  = tdNotes.querySelector('input').value.trim();
+
+          fetch(`/deposits/${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type':'application/json',
+              'X-CSRF-TOKEN':'{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+              status:     newStatus,
+              work_notes: newNotes || null
+            })
+          })
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            tdStatus.textContent = newStatus;
+            tdNotes.textContent  = newNotes || 'N/A';
+            teardown();
+            flash(data.message,'success');
+          })
+          .catch(() => {
+            tdStatus.textContent = oldStatus;
+            tdNotes.textContent  = oldNotes;
+            teardown();
+            flash('Error al actualizar','danger');
+          });
+        }
+      };
+    });
+  }
 
   // “+ Información” button
   document.addEventListener('click', e => {
@@ -219,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
           canvas = document.getElementById('patternCanvas'),
           ctx    = canvas.getContext('2d');
 
-    // Detalles
+    // Rellenar detalles
     dl.innerHTML = `
       <dt class="col-sm-3">ID</dt><dd class="col-sm-9">${info.id}</dd>
       <dt class="col-sm-3">Cliente</dt><dd class="col-sm-9">${info.client}</dd>
@@ -228,108 +238,92 @@ document.addEventListener('DOMContentLoaded', () => {
       <dt class="col-sm-3">Problema</dt><dd class="col-sm-9">${info.problem_description}</dd>
       <dt class="col-sm-3">Info Adic.</dt><dd class="col-sm-9">${info.more_info ?? 'N/A'}</dd>
       <dt class="col-sm-3">Patrón</dt><dd class="col-sm-9">${info.unlock_password ? info.unlock_password : 'N/A'}</dd>
-      <dt class="col-sm-3">Pin o contraseña</dt><dd class="col-sm-9">${info.pin_or_password ?? 'N/A'}</dd>
+      <dt class="col-sm-3">Pin/Contraseña</dt><dd class="col-sm-9">${info.pin_or_password ?? 'N/A'}</dd>
       <dt class="col-sm-3">Estado</dt><dd class="col-sm-9">${info.status}</dd>
-      <dt class="col-sm-3">Garantía</dt>
-      <dd class="col-sm-9 text-danger">${info.under_warranty ? 'Sí' : 'No'}</dd>
+      <dt class="col-sm-3">Garantía</dt><dd class="col-sm-9 text-danger">${info.under_warranty ? 'Sí' : 'No'}</dd>
       <dt class="col-sm-3">Fecha Entrada</dt><dd class="col-sm-9">${info.date_in}</dd>
       <dt class="col-sm-3">Fecha Salida</dt><dd class="col-sm-9">${info.date_out ?? 'N/A'}</dd>
       <dt class="col-sm-3">Creado por</dt><dd class="col-sm-9">${info.creator ?? 'N/A'}</dd>
       <dt class="col-sm-3">Última modif.</dt><dd class="col-sm-9">${info.last_modifier ?? 'N/A'}</dd>
-      
-      <!-- NUEVO: Presupuesto -->
       <dt class="col-sm-3">Presupuesto</dt>
-      <dd class="col-sm-9">
-        ${info.budget !== null ? info.budget.toFixed(2) + ' €' : 'N/A'}
-      </dd>
+      <dd class="col-sm-9">${info.budget !== null ? info.budget.toFixed(2) + ' €' : 'N/A'}</dd>
     `;
 
-    // Dibuja patrón si existe, resaltando inicio en verde y mostrando índice
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Dibuja patrón (si existe)
+    ctx.clearRect(0,0,canvas.width,canvas.height);
     if (info.unlock_password) {
-      const seq = info.unlock_password.split('').map(n => parseInt(n,10));
-      const margin  = 20;
-      const spacing = (canvas.width - 2*margin) / 2;
-      const startColor = '#198754'; // verde Bootstrap
-      const dotColor   = '#0d6efd'; // azul
-
-      // Configuración texto
+      const seq = info.unlock_password.split('').map(n=>+n),
+            m = 20, s = (canvas.width-2*m)/2;
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
 
-      // Dibujar nodos y etiquetas
-      for (let i = 1; i <= 9; i++) {
-        const idx  = i - 1,
-              rowI = Math.floor(idx/3),
-              colI = idx % 3,
-              x    = margin + colI * spacing,
-              y    = margin + rowI * spacing;
-        // Nodo
+      // Nodos
+      for (let i=1;i<=9;i++){
+        const idx = i-1, r=Math.floor(idx/3), c=idx%3,
+              x=m+c*s, y=m+r*s;
         ctx.beginPath();
-        ctx.arc(x, y, 8, 0, 2*Math.PI);
-        if (seq.includes(i)) {
-          ctx.fillStyle = (i === seq[0]) ? startColor : dotColor;
-        } else {
-          ctx.fillStyle = '#ccc';
-        }
+        ctx.arc(x,y,8,0,2*Math.PI);
+        ctx.fillStyle = seq.includes(i) ? (i===seq[0]?'#198754':'#0d6efd') : '#ccc';
         ctx.fill();
-        // Índice debajo
-        ctx.fillStyle = '#000';
-        ctx.fillText(i, x, y + 10);
+        ctx.fillStyle='#000'; ctx.fillText(i,x,y+10);
       }
-
-      // Dibujar líneas en verde
-      ctx.strokeStyle = startColor;
-      ctx.lineWidth = 4;
+      // Líneas
+      ctx.strokeStyle='#198754'; ctx.lineWidth=4;
       ctx.beginPath();
-      seq.forEach((n, i) => {
-        const idx  = n - 1,
-              r    = Math.floor(idx/3),
-              c    = idx % 3,
-              x    = margin + c * spacing,
-              y    = margin + r * spacing;
-        if (i === 0) ctx.moveTo(x, y);
-        else         ctx.lineTo(x, y);
+      seq.forEach((n,i)=>{
+        const idx=n-1, r=Math.floor(idx/3), c=idx%3,
+              x=m+c*s, y=m+r*s;
+        i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
       });
       ctx.stroke();
-      canvas.style.display = 'block';
+      canvas.style.display='block';
     } else {
-      canvas.style.display = 'none';
+      canvas.style.display='none';
     }
 
     new bootstrap.Modal(document.getElementById('infoModal')).show();
     document.getElementById('btnGenerateLabel').href = `/deposits/${info.id}/label`;
   });
 
-  // AJAX live-search + per-page reload
-  const perPage   = document.getElementById('perPageSelect'),
-        search    = document.getElementById('searchInput'),
-        container = document.getElementById('tableContainer');
+  // AJAX reload (search, perPage, warranty)
   let timer;
-  function reload() {
-    const params = new URLSearchParams({
-      per_page: perPage.value,
-      search:   search.value
-    });
-    fetch(`{{ url('deposits') }}?${params}`, {
-      headers: { 'X-Requested-With':'XMLHttpRequest' }
-    })
-    .then(r => r.text())
-    .then(html => {
-      container.innerHTML = html;
-      attachInlineEdit();
-    });
+  function reload(url) {
+    let fetchUrl = url || 
+      `{{ url('deposits') }}?` + new URLSearchParams({
+        per_page: perPage.value,
+        search:   search.value,
+        warranty: warranty ? 1 : 0
+      });
+    fetch(fetchUrl, { headers:{ 'X-Requested-With':'XMLHttpRequest' } })
+      .then(r=>r.text())
+      .then(html=>{
+        container.innerHTML = html;
+        attachInlineEdit();
+      });
   }
-  perPage.onchange = reload;
-  search.oninput   = () => {
-    clearTimeout(timer);
-    timer = setTimeout(reload, 300);
+
+  perPage.onchange = () => reload();
+  search.oninput   = () => { clearTimeout(timer); timer = setTimeout(()=>reload(),300); };
+
+  // Toggle garantía
+  warrantyBtn.onclick = () => {
+    warranty = !warranty;
+    warrantyBtn.classList.toggle('btn-primary');
+    warrantyBtn.classList.toggle('btn-outline-primary');
+    reload();
   };
 
-  // Iniciar inline-edit
+  // Captura paginación AJAX
+  container.addEventListener('click', e => {
+    const link = e.target.closest('.pagination a');
+    if (!link) return;
+    e.preventDefault();
+    reload(link.href);
+  });
+
+  // Inicializar
   attachInlineEdit();
 });
 </script>
 @endpush
-
