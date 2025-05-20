@@ -96,13 +96,18 @@
     </div>
 
 
-    <div class="section">
-      <h2>Presupuesto</h2>
-      
-      @if($deposit->more_info)
-        <p><em>Presupuesto:</em> {{ $deposit->budget }} €</p>
-      @endif
-    </div>
+<div class="section">
+  <h2>Presupuesto</h2>
+
+  {{-- Si no hay presupuesto --}}
+  @if (is_null($deposit->budget))
+    <p><em>Sin presupuesto</em></p>
+  @else
+    {{-- Si existe, mostramos el valor --}}
+    <p><em>Presupuesto:</em> {{ $deposit->budget }} €</p>
+  @endif
+</div>
+
 
   </div>
 </body>

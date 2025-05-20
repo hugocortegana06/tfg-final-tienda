@@ -15,7 +15,8 @@ use App\Http\Controllers\DepositController;
 | protegiéndolas con los middlewares adecuados.
 |
 */
-
+Route::get('/login', [AuthController::class, 'showLoginForm'])
+     ->name('login'); 
 // Rutas públicas (no requieren estar autenticado)
 Route::get('/', fn() => redirect()->route('login.form'));
 Route::get('/login', [AuthController::class, 'showLoginForm'])

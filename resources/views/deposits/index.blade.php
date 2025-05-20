@@ -220,6 +220,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Llamada inicial para activar inline-edit en primera carga
+  attachInlineEdit();
+
   // “+ Información” button
   document.addEventListener('click', e => {
     if (!e.target.matches('.btn-info-detail')) return;

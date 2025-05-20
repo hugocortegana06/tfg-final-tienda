@@ -6,6 +6,7 @@ use App\Models\Deposit;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Validator; // Añadido para usar Validator
 
 class DepositController extends Controller
 {
@@ -76,7 +77,8 @@ class DepositController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
+
+            $validator = Validator::make($request->all(), [
             'client_phone'        => 'required|exists:clients,phone',
             'brand'               => 'required|string|max:100',
             'model'               => 'required|string|max:100',
@@ -90,6 +92,15 @@ class DepositController extends Controller
             'under_warranty'      => 'sometimes|boolean',
             'status'              => 'required|in:En curso,Electrónico,Finalizado,Entregado',
         ]);
+
+        if ($validator->fails()) {
+            // Redirigimos siempre a la pantalla de creación con los errores y old()
+            return redirect()->route('deposits.create')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         // Asignar creadores y fechas
         $data['user_id']                   = auth()->id();
