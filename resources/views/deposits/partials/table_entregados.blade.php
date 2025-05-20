@@ -3,7 +3,6 @@
   <thead>
     <tr>
       <th>ID</th>
-      <th>Estado</th>
       <th>Dispositivo</th>
       <th>Cliente</th>
       <th>Fecha Entrada</th>
@@ -43,7 +42,6 @@
         data-details='{!! $jsonDetails !!}'
       >
         <td>{{ $d->id }}</td>
-        <td class="dep-status">{{ $d->status }}</td>
         <td>{{ $d->brand }} {{ $d->model }}</td>
         <td>{{ $d->client->name }} {{ $d->client->surname }}</td>
         <td>{{ \Illuminate\Support\Carbon::parse($d->date_in)->format('d/m/Y') }}</td>
@@ -62,8 +60,7 @@
           </button>
 
           @if(auth()->user()->role === 'admin')
-            {{-- Editar --}}
-            <button class="btn btn-sm btn-info btn-edit me-1">Editar</button>
+            
             {{-- Eliminar --}}
             <form 
               action="{{ route('deposits.destroy', $d->id) }}" 
