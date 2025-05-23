@@ -6,7 +6,7 @@ use App\Models\Deposit;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Validator; // Añadido para usar Validator
+use Illuminate\Support\Facades\Validator;
 
 class DepositController extends Controller
 {
@@ -31,11 +31,12 @@ class DepositController extends Controller
             ->whereNotIn('status', ['Finalizado','Entregado'])
             ->orderBy('created_at','desc');
 
-        // Filtro live-search por cliente
+        // Filtro live-search por cliente (nombre, apellidos, nombre completo)
         if ($search = $request->get('search')) {
             $query->whereHas('client', function($q) use($search) {
                 $q->where('name','like',"%{$search}%")
-                  ->orWhere('surname','like',"%{$search}%");
+                  ->orWhere('surname','like',"%{$search}%")
+                  ->orWhereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$search}%"]);
             });
         }
 
@@ -77,8 +78,7 @@ class DepositController extends Controller
      */
     public function store(Request $request)
     {
-
-            $validator = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'client_phone'        => 'required|exists:clients,phone',
             'brand'               => 'required|string|max:100',
             'model'               => 'required|string|max:100',
@@ -177,7 +177,8 @@ class DepositController extends Controller
         if ($search = $request->get('search')) {
             $query->whereHas('client', function($q) use($search) {
                 $q->where('name','like',"%{$search}%")
-                  ->orWhere('surname','like',"%{$search}%");
+                  ->orWhere('surname','like',"%{$search}%")
+                  ->orWhereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$search}%"]);
             });
         }
 
@@ -208,7 +209,8 @@ class DepositController extends Controller
         if ($search = $request->get('search')) {
             $query->whereHas('client', function($q) use($search) {
                 $q->where('name','like',"%{$search}%")
-                  ->orWhere('surname','like',"%{$search}%");
+                  ->orWhere('surname','like',"%{$search}%")
+                  ->orWhereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$search}%"]);
             });
         }
 
@@ -239,7 +241,8 @@ class DepositController extends Controller
         if ($search = $request->get('search')) {
             $query->whereHas('client', function($q) use($search) {
                 $q->where('name','like',"%{$search}%")
-                  ->orWhere('surname','like',"%{$search}%");
+                  ->orWhere('surname','like',"%{$search}%")
+                  ->orWhereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$search}%"]);
             });
         }
 
@@ -270,7 +273,8 @@ class DepositController extends Controller
         if ($search = $request->get('search')) {
             $query->whereHas('client', function($q) use($search) {
                 $q->where('name','like',"%{$search}%")
-                  ->orWhere('surname','like',"%{$search}%");
+                  ->orWhere('surname','like',"%{$search}%")
+                  ->orWhereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$search}%"]);
             });
         }
 
