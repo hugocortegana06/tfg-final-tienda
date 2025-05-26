@@ -9,7 +9,7 @@ class ClientController extends Controller
 {
     /**
      * Mostrar listado de clientes con paginación,
-     * control de per-page y búsqueda por nombre/apellidos.
+     * control de per-page y búsqueda por nombre/apellidos/nombre completo.
      */
     public function index(Request $request)
     {
@@ -32,8 +32,11 @@ class ClientController extends Controller
         // 4. Construir la consulta con filtro condicional y ordenación
         $query = Client::orderBy('created_at', 'desc')
             ->when($search, function($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('surname', 'LIKE', "%{$search}%");
+                $q->where(function($qq) use ($search) {
+                    $qq->where('name', 'LIKE', "%{$search}%")
+                       ->orWhere('surname', 'LIKE', "%{$search}%")
+                       ->orWhereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$search}%"]);
+                });
             });
 
         // 5. Paginación y preservación de query string
@@ -145,8 +148,11 @@ class ClientController extends Controller
     {
         $q = $request->get('query', '');
 
-        $matches = Client::where('name', 'LIKE', "%{$q}%")
-            ->orWhere('surname', 'LIKE', "%{$q}%")
+        $matches = Client::where(function($qq) use ($q) {
+                $qq->where('name', 'LIKE', "%{$q}%")
+                   ->orWhere('surname', 'LIKE', "%{$q}%")
+                   ->orWhereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$q}%"]);
+            })
             ->limit(5)
             ->get()
             ->map(function($c) {
